@@ -19,6 +19,7 @@ import {
   X,
   FileText
 } from 'lucide-react'
+import { ThemeToggle } from './ui/ThemeToggle'
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -128,6 +129,8 @@ export function Sidebar() {
         </div>
         <nav className="flex-1 overflow-auto p-2">
           <ul className="space-y-1">
+              <ThemeToggle />
+
             {sidebarItems
               .filter((i) => i.show !== false)
               .map((item) => (

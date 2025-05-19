@@ -31,26 +31,34 @@ interface PatientProfile {
 
 export default function ProfilePage() {
   const { user } = useAuth();
-  const userId = user?.id;
   const { toast } = useToast();
 
   const [profile, setProfile] = useState<PatientProfile | null>(null);
-  const [form, setForm] = useState<PatientProfile>({
-    userId: userId!,
-    name: "",
-    age: undefined,
-    dateOfBirth: "",
-    gender: "male",
-    doctorName: "",
-    doctorContact: "",
-  });
+  const [form, setForm] = useState<PatientProfile | null>(null);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Initialize form after user is loaded
+  useEffect(() => {
+    if (user?.id && form === null) {
+      setForm({
+        userId: user.id,
+        name: "",
+        age: undefined,
+        dateOfBirth: "",
+        gender: "male",
+        doctorName: "",
+        doctorContact: "",
+      });
+    }
+  }, [user, form]);
+
   // Load existing profile
   useEffect(() => {
-    if (!userId) return;
-    fetch(`/api/patients?userId=${userId}`)
+    if (!user?.id) return;
+    
+    setLoading(true);
+    fetch(`/api/patients?userId=${user.id}`)
       .then((r) => {
         if (r.ok) return r.json();
         if (r.status === 404) return null;
@@ -60,7 +68,7 @@ export default function ProfilePage() {
         if (data) {
           setProfile(data);
           setForm({
-            userId,
+            userId: user.id,
             name: data.name,
             age: data.age,
             dateOfBirth: data.dateOfBirth ? data.dateOfBirth.split("T")[0] : "",
@@ -70,6 +78,17 @@ export default function ProfilePage() {
           });
         } else {
           setIsEditing(true);
+          if (!form) {
+            setForm({
+              userId: user.id,
+              name: "",
+              age: undefined,
+              dateOfBirth: "",
+              gender: "male",
+              doctorName: "",
+              doctorContact: "",
+            });
+          }
         }
       })
       .catch((e) => {
@@ -77,32 +96,45 @@ export default function ProfilePage() {
         setIsEditing(true);
       })
       .finally(() => setLoading(false));
-  }, [userId, toast]);
+  }, [user?.id, toast]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
+    if (!form) return;
+    
     const { name, value } = e.target;
-    setForm((f) => ({
-      ...f,
-      [name]:
-        name === "age" ? (value === "" ? undefined : Number(value)) : value,
-    }));
+    setForm((f) => {
+      if (!f) return null;
+      return {
+        ...f,
+        [name]:
+          name === "age" ? (value === "" ? undefined : Number(value)) : value,
+      };
+    });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId) return;
+    if (!user?.id || !form) return;
+    
     try {
+      console.log("Sending data:", form); // Debugging
+      
       const res = await fetch("/api/patients", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify({
+          ...form,
+          userId: user.id, // Ensure we're using the current user ID
+        }),
       });
+      
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "No se pudo guardar");
       }
+      
       const saved: PatientProfile = await res.json();
       setProfile(saved);
       setIsEditing(false);
@@ -116,6 +148,10 @@ export default function ProfilePage() {
     return <p className="text-center py-10">Cargando perfil…</p>;
   }
 
+  if (!user) {
+    return <p className="text-center py-10">Debe iniciar sesión para ver este perfil</p>;
+  }
+
   return (
     <div className="max-w-md mx-auto py-8">
       <div className="flex justify-between items-center mb-6">
@@ -127,7 +163,7 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {isEditing ? (
+      {isEditing && form ? (
         <Card>
           <CardHeader>
             <CardTitle>Editar Información</CardTitle>

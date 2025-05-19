@@ -1,39 +1,50 @@
+// app/dashboard/medications/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
+import { useAuth } from "@/lib/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  Card,
+  CardHeader,
+  CardContent,
+} from "@/components/ui/card";
 import {
   Dialog,
+  DialogTrigger,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
-  PopoverContent,
   PopoverTrigger,
+  PopoverContent,
 } from "@/components/ui/popover";
 import {
   Select,
-  SelectContent,
-  SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectContent,
+  SelectItem,
 } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import { CalendarIcon, Pill, Plus, Trash2 } from "lucide-react";
-import { useAuth } from "@/lib/auth-provider";
+import {
+  CalendarIcon,
+  Pill,
+  Plus,
+  Edit3,
+  Trash2,
+} from "lucide-react";
 
 interface MedicationData {
   id: number;
@@ -43,303 +54,263 @@ interface MedicationData {
   type: string;
   frequency: "daily" | "weekly" | "custom";
   startDate: string;
-  endDate?: string;
   notes?: string;
 }
 
 export default function MedicationsPage() {
-  const { user } = useAuth();
-  // Modificamos la obtención del patientProfileId
-  const defaultPatientId = 1; // Valor predeterminado en caso de que no haya ID
-  const pid =
-    (user as any)?.patientId ??
-    (user?.role === "PATIENT" ? (user as any)?.profileId : undefined) ?? 
-    defaultPatientId;
+  const { user, loading: authLoading } = useAuth();
+  const toast = useToast().toast;
 
-  const { toast } = useToast();
+  // patientProfileId for this user
+  const pid = user?.profileId;
 
-  /* ---------------- state ---------------- */
-  const [medications, setMedications] = useState<MedicationData[]>([]);
-  const [open, setOpen] = useState(false);
-  const [startDate, setStartDate] = useState<Date>();
-  const [form, setForm] = useState({
+  // global list & loading state
+  const [meds, setMeds] = useState<MedicationData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // ─── Fetch ─────────────────────────────────────────────────────────
+  const fetchMedications = async () => {
+    if (!pid) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/medications?patientProfileId=${pid}`);
+      if (!res.ok) throw new Error("Failed to load");
+      const data: MedicationData[] = await res.json();
+      setMeds(data);
+    } catch (err) {
+      console.error(err);
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar los medicamentos",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!authLoading) fetchMedications();
+  }, [authLoading, pid]);
+
+  // ─── Create Dialog State ────────────────────────────────────────────
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
     name: "",
     dosage: "",
     type: "",
     frequency: "daily" as "daily" | "weekly" | "custom",
-    notes: "",
   });
+  const [createStart, setCreateStart] = useState<Date>();
 
-  /* ---------------- fetch existing ---------------- */
-  useEffect(() => {
-    if (pid) {
-      fetchMedications();
-    } else {
-      console.log("Esperando ID de paciente...");
-    }
-  }, [pid]);
-
-  const fetchMedications = async () => {
-    try {
-      // Siempre usamos el pid (ahora tiene un valor predeterminado)
-      const response = await fetch(`/api/medications?patientProfileId=${pid}`);
-      if (response.ok) {
-        const data = await response.json();
-        setMedications(data);
-      } else {
-        console.error("Error fetching medications");
-        toast({
-          title: "Error",
-          description: "No se pudieron cargar los medicamentos",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching medications:", error);
-      toast({
-        title: "Error",
-        description: "Error al cargar los medicamentos",
-        variant: "destructive",
-      });
-    }
-  };
-
-  /* ---------------- helpers ---------------- */
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setForm((p) => ({ ...p, [name]: value }));
-  };
-
-  const handleSelectChange = (value: "daily" | "weekly" | "custom") => {
-    setForm((p) => ({ ...p, frequency: value }));
-  };
-
-  const resetForm = () => {
-    setForm({
+  const resetCreate = () => {
+    setCreateForm({
       name: "",
       dosage: "",
       type: "",
       frequency: "daily",
-      notes: "",
     });
-    setStartDate(undefined);
+    setCreateStart(undefined);
   };
 
-  /* ---------------- submit new medication ---------------- */
-  const submitMedication = async (e: React.FormEvent) => {
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!startDate) {
+    if (!pid || !createStart) {
       toast({
         title: "Error",
-        description: "Debe seleccionar una fecha de inicio",
+        description: "Complete todos los campos",
         variant: "destructive",
       });
       return;
     }
-    
-    const body = {
-      patientProfileId: pid, // Ahora siempre tendrá un valor
-      name: form.name,
-      dosage: form.dosage,
-      type: form.type,
-      frequency: form.frequency,
-      startDate: startDate.toISOString(),
-      notes: form.notes || undefined,
-    };
-
     try {
       const res = await fetch("/api/medications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          patientProfileId: pid,
+          ...createForm,
+          startDate: createStart.toISOString(),
+        }),
       });
-
       if (!res.ok) {
-        const errorData = await res.json();
-        toast({
-          title: "Error",
-          description: errorData.error || "No se pudo guardar",
-          variant: "destructive",
-        });
-        return;
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Error al guardar");
       }
+      await fetchMedications();
+      resetCreate();
+      setCreateOpen(false);
+      toast({ title: "Medicamento creado" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
 
-      const created: MedicationData = await res.json();
-      setMedications((m) => [...m, created]);
-      resetForm();
-      setOpen(false);
-      toast({ title: "Exito", description: "Medicamento guardado" });
-    } catch (error) {
-      console.error("Error creating medication:", error);
+  // ─── Edit Dialog State ──────────────────────────────────────────────
+  const [editOpen, setEditOpen] = useState(false);
+  const [medToEdit, setMedToEdit] = useState<MedicationData | null>(null);
+  const [editForm, setEditForm] = useState(createForm);
+  const [editStart, setEditStart] = useState<Date>();
+
+  const openEdit = (med: MedicationData) => {
+    setMedToEdit(med);
+    setEditForm({
+      name: med.name,
+      dosage: med.dosage,
+      type: med.type,
+      frequency: med.frequency,
+    });
+    setEditStart(new Date(med.startDate));
+    setEditOpen(true);
+  };
+
+  const handleEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!medToEdit || !editStart) return;
+    try {
+      const res = await fetch(`/api/medications/${medToEdit.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...editForm,
+          startDate: editStart.toISOString(),
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Error al actualizar");
+      }
+      await fetchMedications();
+      setEditOpen(false);
+      toast({ title: "Medicamento actualizado" });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    }
+  };
+
+  // ─── Delete ──────────────────────────────────────────────────────────
+  const deleteMed = async (id: number) => {
+    try {
+      const res = await fetch(`/api/medications/${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error();
+      setMeds((ms) => ms.filter((m) => m.id !== id));
+      toast({ title: "Medicamento eliminado" });
+    } catch {
       toast({
         title: "Error",
-        description: "No se pudo guardar el medicamento",
+        description: "No se pudo eliminar",
         variant: "destructive",
       });
     }
   };
 
-  /* ---------------- delete ---------------- */
-  const deleteMedication = async (id: number) => {
-    try {
-      const res = await fetch(`/api/medications/${id}`, { method: "DELETE" });
-      
-      if (res.ok) {
-        setMedications((m) => m.filter((med) => med.id !== id));
-        toast({ title: "Medicamento eliminado" });
-      } else {
-        toast({ 
-          title: "Error", 
-          description: "No se pudo eliminar el medicamento",
-          variant: "destructive" 
-        });
-      }
-    } catch (error) {
-      console.error("Error deleting medication:", error);
-      toast({ 
-        title: "Error", 
-        description: "Error al eliminar el medicamento",
-        variant: "destructive" 
-      });
-    }
-  };
+  // ─── Render ─────────────────────────────────────────────────────────
+  if (authLoading || loading) {
+    return <p className="p-8 text-center text-muted-foreground">Cargando…</p>;
+  }
 
-  /* ---------------- render frequency text ---------------- */
-  const getFrequencyText = (frequency: string) => {
-    switch (frequency) {
-      case "daily": return "Diario";
-      case "weekly": return "Semanal";
-      case "custom": return "Personalizado";
-      default: return frequency;
-    }
-  };
-
-  /* ---------------- render medication type ---------------- */
-  const getMedicationType = (type: string) => {
-    switch (type.toLowerCase()) {
-      case "oral": return "Oral";
-      case "liquid": return "Líquido";
-      case "injection": return "Inyección";
-      case "topical": return "Tópico";
-      case "inhaler": return "Inhalador";
-      default: return type;
-    }
-  };
-
-  /* ---------------- render ---------------- */
   return (
-    <div className="space-y-6">
-      {/* header + dialog */}
-      <div className="flex items-start sm:items-center justify-between gap-4 flex-col sm:flex-row">
-        <h1 className="text-2xl font-bold">Medicamentos</h1>
-        {pid && (
-          <Dialog open={open} onOpenChange={setOpen}>
+    <div className="space-y-6 p-4">
+      {/* Header + Create */}
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">Mis Medicamentos</h1>
+        <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Agregar Medicamento
+              <Plus className="mr-2 h-4 w-4" /> Nuevo
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <form onSubmit={submitMedication}>
-              <DialogHeader>
-                <DialogTitle>Nuevo Medicamento</DialogTitle>
-                <DialogDescription>Complete la información del medicamento</DialogDescription>
-              </DialogHeader>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Agregar Medicamento</DialogTitle>
+              <DialogDescription>
+                Completa la información para crear un medicamento
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handleCreate}>
               <div className="grid gap-4 py-4">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nombre del medicamento</Label>
+                <div>
+                  <Label>Nombre</Label>
                   <Input
-                    id="name"
-                    name="name"
-                    placeholder="Nombre del medicamento"
-                    value={form.name}
-                    onChange={handleChange}
+                    value={createForm.name}
+                    onChange={(e) =>
+                      setCreateForm((f) => ({ ...f, name: e.target.value }))
+                    }
                     required
                   />
                 </div>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="dosage">Dosis</Label>
-                    <Input
-                      id="dosage"
-                      name="dosage"
-                      placeholder="Ej: 500mg"
-                      value={form.dosage}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="type">Tipo</Label>
-                    <Input
-                      id="type"
-                      name="type"
-                      placeholder="Ej: Oral, Líquido"
-                      value={form.type}
-                      onChange={handleChange}
-                      required
-                    />
-                  </div>
+                <div>
+                  <Label>Dosis</Label>
+                  <Input
+                    value={createForm.dosage}
+                    onChange={(e) =>
+                      setCreateForm((f) => ({ ...f, dosage: e.target.value }))
+                    }
+                    required
+                  />
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="frequency">Frecuencia</Label>
-                  <Select 
-                    value={form.frequency} 
-                    onValueChange={(value: any) => handleSelectChange(value)}
+                <div>
+                  <Label>Tipo</Label>
+                  <Input
+                    value={createForm.type}
+                    onChange={(e) =>
+                      setCreateForm((f) => ({ ...f, type: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
+                <div>
+                  <Label>Frecuencia</Label>
+                  <Select
+                    value={createForm.frequency}
+                    onValueChange={(v) =>
+                      setCreateForm((f) => ({ ...f, frequency: v as any }))
+                    }
                   >
-                    <SelectTrigger id="frequency">
-                      <SelectValue placeholder="Seleccione frecuencia" />
+                    <SelectTrigger>
+                      <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="daily">Diario</SelectItem>
+                      <SelectItem value="daily">Diaria</SelectItem>
                       <SelectItem value="weekly">Semanal</SelectItem>
-                      <SelectItem value="custom">Personalizado</SelectItem>
+                      <SelectItem value="custom">Personalizada</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label>Fecha de inicio</Label>
+                <div>
+                  <Label>Fecha</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
                         className={cn(
                           "w-full justify-start",
-                          !startDate && "text-muted-foreground"
+                          !createStart && "text-muted-foreground"
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {startDate
-                          ? format(startDate, "PPP", { locale: es })
+                        {createStart
+                          ? format(createStart, "PPP", { locale: es })
                           : "Seleccionar fecha"}
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
                       <Calendar
                         mode="single"
-                        selected={startDate}
-                        onSelect={setStartDate}
+                        selected={createStart}
+                        onSelect={setCreateStart}
                         locale={es}
                       />
                     </PopoverContent>
                   </Popover>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Notas adicionales</Label>
+                <div>
+                  <Label>Notas</Label>
                   <Textarea
-                    id="notes"
-                    name="notes"
-                    placeholder="Notas adicionales (opcional)"
-                    value={form.notes}
-                    onChange={handleChange}
+                    value={createForm.notes}
+                    onChange={(e) =>
+                      setCreateForm((f) => ({ ...f, notes: e.target.value }))
+                    }
                   />
                 </div>
               </div>
@@ -348,65 +319,163 @@ export default function MedicationsPage() {
               </DialogFooter>
             </form>
           </DialogContent>
-                  </Dialog>
-        )}
+        </Dialog>
       </div>
-      
-      {/* list */}
-      <div className="grid gap-4">
-        {medications.length > 0 ? (
-          medications.map((med) => (
-            <Card key={med.id}>
-              <CardContent className="p-6 space-y-2">
-                <div className="flex justify-between">
-                  <div className="flex items-center space-x-2">
-                    <div className="rounded-full bg-primary/10 p-2">
-                      <Pill className="h-5 w-5 text-primary" />
-                    </div>
-                    <div>
-                      <h3 className="font-medium">{med.name}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        {med.dosage} - {getMedicationType(med.type)}
-                      </p>
-                    </div>
-                  </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogTrigger asChild>
+          {/* we'll open programmatically via openEdit() */}
+          <span />
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar Medicamento</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEdit}>
+            <div className="grid gap-4 py-4">
+              <div>
+                <Label>Nombre</Label>
+                <Input
+                  value={editForm.name}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, name: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <Label>Dosis</Label>
+                <Input
+                  value={editForm.dosage}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, dosage: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <Label>Tipo</Label>
+                <Input
+                  value={editForm.type}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, type: e.target.value }))
+                  }
+                  required
+                />
+              </div>
+              <div>
+                <Label>Frecuencia</Label>
+                <Select
+                  value={editForm.frequency}
+                  onValueChange={(v) =>
+                    setEditForm((f) => ({ ...f, frequency: v as any }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="daily">Diaria</SelectItem>
+                    <SelectItem value="weekly">Semanal</SelectItem>
+                    <SelectItem value="custom">Personalizada</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Fecha</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={cn(
+                        "w-full justify-start",
+                        !editStart && "text-muted-foreground"
+                      )}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {editStart
+                        ? format(editStart, "PPP", { locale: es })
+                        : "Seleccionar fecha"}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={editStart}
+                      onSelect={setEditStart}
+                      locale={es}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label>Notas</Label>
+                <Textarea
+                  value={editForm.notes}
+                  onChange={(e) =>
+                    setEditForm((f) => ({ ...f, notes: e.target.value }))
+                  }
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit">Actualizar</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* List */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {meds.map((med) => (
+          <Card key={med.id}>
+            <CardHeader className="bg-primary/5 pb-2">
+              <div className="flex items-center justify-between">
+                <CardContent className="flex items-center text-base">
+                  <Pill className="mr-2 h-4 w-4" />
+                  {med.name}
+                </CardContent>
+                <div className="flex space-x-2">
                   <Button
-                    variant="ghost"
                     size="icon"
+                    variant="outline"
+                    onClick={() => openEdit(med)}
+                  >
+                    <Edit3 className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
                     className="text-destructive"
-                    onClick={() => deleteMedication(med.id)}
+                    onClick={() => deleteMed(med.id)}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
-                
-                <div className="flex flex-wrap gap-2 text-xs">
-                  <span className="bg-secondary/50 rounded-full px-3 py-1">
-                    {getFrequencyText(med.frequency)}
-                  </span>
-                  <span className="bg-secondary/50 rounded-full px-3 py-1">
-                    Desde: {format(new Date(med.startDate), "PPP", { locale: es })}
-                  </span>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex justify-between">
+                <span className="text-sm">Dosis:</span>
+                <span className="text-sm">{med.dosage}</span>
+              </div>
+              <div className="flex items-center text-sm text-muted-foreground pt-2">
+                <span>
+                  Fecha:{" "}
+                  {format(new Date(med.startDate), "d 'de' MMMM, yyyy", {
+                    locale: es,
+                  })}
+                </span>
+              </div>
+              {med.notes && (
+                <div className="mt-2 rounded-md bg-muted p-2 text-sm">
+                  {med.notes}
                 </div>
-                
-                {med.notes && (
-                  <div className="mt-2">
-                    <h4 className="text-sm font-medium">Notas</h4>
-                    <div className="border p-2 rounded-md text-xs mt-1">
-                      <p>{med.notes}</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <Card>
-            <CardContent className="p-6 text-center text-muted-foreground">
-              No hay medicamentos registrados
+              )}
             </CardContent>
           </Card>
-        )}
+        ))}
       </div>
     </div>
   );

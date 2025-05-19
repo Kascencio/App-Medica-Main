@@ -1,32 +1,30 @@
 "use client"
 
-import type React from "react"
-
-import { useEffect } from "react"
-import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-provider"
+import React, { useEffect } from "react"
+import { useRouter }       from "next/navigation"
+import { useAuth }         from "@/lib/auth-provider"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle }     from "lucide-react"
 
 export default function CaregiverLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode
-}>) {
-  const { user, isAuthenticated, isLoading } = useAuth()
-  const router = useRouter()
+}) {
+  const { user, loading } = useAuth()
+  const router           = useRouter()
 
   useEffect(() => {
-    if (!isLoading) {
-      if (!isAuthenticated) {
+    if (!loading) {
+      if (!user) {
         router.push("/login")
-      } else if (user?.role !== "caregiver") {
+      } else if (user.role !== "CAREGIVER") {
         router.push("/dashboard")
       }
     }
-  }, [isAuthenticated, isLoading, router, user])
+  }, [user, loading, router])
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex h-screen items-center justify-center">
         <div className="animate-pulse text-center">
@@ -36,7 +34,7 @@ export default function CaregiverLayout({
     )
   }
 
-  if (user?.role !== "caregiver") {
+  if (user?.role !== "CAREGIVER") {
     return (
       <div className="p-4">
         <Alert variant="destructive">

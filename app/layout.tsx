@@ -28,6 +28,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
           <AuthProvider>
+            <Toaster />
             {children}
             <Toaster />
           </AuthProvider>

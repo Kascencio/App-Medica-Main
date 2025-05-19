@@ -171,7 +171,7 @@ export default function MedicationsPage() {
       setMedications((m) => [...m, created]);
       resetForm();
       setOpen(false);
-      toast({ title: "Medicamento agregado" });
+      toast({ title: "Exito", description: "Medicamento guardado" });
     } catch (error) {
       console.error("Error creating medication:", error);
       toast({

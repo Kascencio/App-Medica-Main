@@ -1,66 +1,102 @@
-import { NextRequest, NextResponse } from "next/server";
-import prisma                         from "@/lib/prisma";
-import { z }                          from "zod";
-import bcrypt                         from "bcryptjs";
-import jwt                            from "jsonwebtoken";
+import { NextRequest, NextResponse } from "next/server"
+import prisma                         from "@/lib/prisma"
+import { z }                          from "zod"
+import bcrypt                         from "bcryptjs"
+import jwt                            from "jsonwebtoken"
 
 const LoginSchema = z.object({
   email:    z.string().email(),
   password: z.string().min(1),
-});
+})
 
 export async function POST(req: NextRequest) {
-  console.log("[LOGIN] petición recibida");
-
   try {
-    /* ---------- body + validación ---------- */
-    const { email, password } = LoginSchema.parse(await req.json());
-    console.log("[LOGIN] body válido:", email);
+    const { email, password } = LoginSchema.parse(await req.json())
 
-    /* ---------- búsqueda de usuario ---------- */
+    // Traemos al usuario y, si es cuidador, sus permisos
     const user = await prisma.user.findUnique({
-      where:   { email },
-      include: { profile: true },
-    });
-    if (!user) {
-      console.warn("[LOGIN] usuario no existe");
-      return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
+      where: { email },
+      include: {
+        profile: true,
+        givenPermissions: {
+          where: { level: "WRITE" },
+          include: {
+            patientProfile: {
+              select: { id: true, user: { select: { name: true } } }
+            }
+          }
+        }
+      }
+    })
+    if (!user || !(await bcrypt.compare(password, user.passwordHash))) {
+      return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 })
     }
 
-    /* ---------- verificación de contraseña ---------- */
-    const isPassOk = await bcrypt.compare(password, user.passwordHash);
-    if (!isPassOk) {
-      console.warn("[LOGIN] password incorrecto");
-      return NextResponse.json({ error: "Credenciales inválidas" }, { status: 401 });
+    // Preparamos los datos del token y la respuesta
+    let profileId: number | null   = null
+    let patientName: string | null = null
+    let permissions: Record<string, boolean> = {}
+
+    if (user.role === "PATIENT") {
+      profileId = user.profile?.id ?? null
+      // Paciente = puede ver y gestionar TODO
+      permissions = {
+        viewMedications:    true,
+        manageMedications:  true,
+        viewAppointments:   true,
+        manageAppointments: true,
+        viewTreatments:     true,
+        manageTreatments:   true,
+        viewNotes:          true,
+        manageNotes:        true,
+      }
+    } else {
+      // Cuidador: tomamos el primer permiso WRITE
+      const perm = user.givenPermissions[0]
+      if (perm) {
+        profileId   = perm.patientProfileId
+        patientName = perm.patientProfile.user.name
+        // Cuidador WRITE = puede ver y gestionar TODO
+        permissions = {
+          viewMedications:    true,
+          manageMedications:  true,
+          viewAppointments:   true,
+          manageAppointments: true,
+          viewTreatments:     true,
+          manageTreatments:   true,
+          viewNotes:          true,
+          manageNotes:        true,
+        }
+      }
     }
 
-    /* ---------- JWT ---------- */
+    // Firmamos el JWT incluyendo permissions
     const token = jwt.sign(
-      { sub: user.id, role: user.role, profileId: user.profile?.id },
+      { sub: user.id, role: user.role, profileId, patientName, permissions },
       process.env.JWT_SECRET!,
-      { expiresIn: "7d" },
-    );
-
-    console.log("[LOGIN] login OK → id:", user.id, " profileId:", user.profile?.id ?? "—");
+      { expiresIn: "7d" }
+    )
 
     return NextResponse.json(
       {
         token,
         user: {
-          id:    user.id,
-          email: user.email,
-          role:  user.role,
-          profileId: user.profile?.id ?? null,
+          id:          user.id,
+          email,
+          role:        user.role,
+          profileId,
+          patientName,
+          permissions,
         },
       },
-      { status: 200 },
-    );
+      { status: 200 }
+    )
   } catch (err) {
-    const isZod = err instanceof z.ZodError;
-    console.error("[LOGIN] error:", err);
+    const isZod = err instanceof z.ZodError
+    console.error("[LOGIN]", err)
     return NextResponse.json(
       { error: isZod ? "Datos inválidos" : "Error interno" },
-      { status: isZod ? 400 : 500 },
-    );
+      { status: isZod ? 400 : 500 }
+    )
   }
 }

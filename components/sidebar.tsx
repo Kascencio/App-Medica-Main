@@ -88,12 +88,6 @@ export function Sidebar() {
             icon: <ClipboardList className="h-5 w-5" />,
             show: user?.permissions?.viewTreatments
           },
-          {
-            title: 'Notas Médicas',
-            href: '/dashboard/caregiver/notes',
-            icon: <FileText className="h-5 w-5" />,
-            show: user?.permissions?.viewNotes
-          },
           { title: 'Configuración', href: '/dashboard/settings', icon: <Settings className="h-5 w-5" /> }
         ]
       : [

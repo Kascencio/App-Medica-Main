@@ -1,11 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Copy } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import {
   Card,
@@ -26,6 +28,7 @@ import {
   UserPlus,
   Download,
   UserX,
+  Plus,
 } from "lucide-react";
 
 // ------------ Types --------------
@@ -91,6 +94,12 @@ export default function SettingsPage() {
     caregiver: true,
   });
 
+  // SettingsPage.tsx (encabezados de estado)
+  const [lastInvite, setLastInvite] = useState<{
+    code: string;
+    expiresAt: string;
+  } | null>(null);
+
   /* ------------------- Effects: fetch caregivers and notif ------------------- */
   useEffect(() => {
     if (!pid || user?.role !== "PATIENT") return;
@@ -155,28 +164,26 @@ export default function SettingsPage() {
     e.preventDefault();
     if (!pid) return;
     setCaregiverLoading(true);
-    const res = await fetch("/api/caregivers", {
+    /* dentro del onClick del botón “Generar código” */
+    const res = await fetch("/api/caregiver-invites", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        patientProfileId: pid,
-        email: caregiverForm.email,
-        tempPassword: caregiverForm.tempPassword,
-        permissions: caregiverForm.permissions,
-      }),
+      body: JSON.stringify({ patientProfileId: pid }),
     });
-    if (res.ok) {
-      const cg: Caregiver = await res.json();
-      setCaregivers((c) => [...c, cg]);
-      setCaregiverForm({ ...caregiverForm, email: "", tempPassword: "" });
-      toast({ title: "Cuidador agregado" });
-    } else {
-      toast({
-        title: "Error",
-        description: "No se pudo agregar",
-        variant: "destructive",
-      });
+
+    if (!res.ok) {
+      toast({ title: "Error", variant: "destructive" });
+      return;
     }
+
+    const invite = await res.json(); // ← { code, expiresAt, … }
+    setLastInvite(invite); // ⬅️  guárdalo en estado
+    navigator.clipboard.writeText(invite.code);
+    toast({
+      title: "Código generado",
+      description: `${invite.code} copiado al portapapeles`,
+    });
+    setCaregiverLoading(false);
     setCaregiverLoading(false);
   };
 
@@ -313,17 +320,6 @@ export default function SettingsPage() {
             </form>
           </Card>
 
-          {/* Export */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Exportar Datos</CardTitle>
-            </CardHeader>
-            <CardFooter>
-              <Button onClick={exportData}>
-                <Download className="mr-2 h-4 w-4" /> Exportar
-              </Button>
-            </CardFooter>
-          </Card>
         </TabsContent>
         {/* ------------------- CAREGIVERS ------------------- */}
         <TabsContent value="caregivers" className="space-y-4">
@@ -336,47 +332,78 @@ export default function SettingsPage() {
           ) : (
             <>
               {/* Form nuevo cuidador */}
+              {/* ---------- INVITE CODE ---------- */}
               <Card>
                 <CardHeader>
-                  <CardTitle>Agregar Cuidador</CardTitle>
+                  <CardTitle>Invitar con código</CardTitle>
+                  <CardDescription>
+                    Comparte el código con tu cuidador. Caduca en 48 horas o
+                    tras ser usado.
+                  </CardDescription>
                 </CardHeader>
-                <form onSubmit={addCaregiver}>
-                  <CardContent className="space-y-4">
-                    <div>
-                      <Label>Email</Label>
-                      <Input
-                        value={caregiverForm.email}
-                        onChange={(e) =>
-                          setCaregiverForm({
-                            ...caregiverForm,
-                            email: e.target.value,
-                          })
-                        }
-                        required
-                      />
-                    </div>
-                    <div>
-                      <Label>Contraseña Temporal</Label>
-                      <Input
-                        type="password"
-                        value={caregiverForm.tempPassword}
-                        onChange={(e) =>
-                          setCaregiverForm({
-                            ...caregiverForm,
-                            tempPassword: e.target.value,
-                          })
-                        }
-                        required
-                      />
-                    </div>
-                  </CardContent>
-                  <CardFooter className="justify-end">
-                    <Button type="submit" disabled={caregiverLoading}>
-                      <UserPlus className="mr-2 h-4 w-4" />
-                      Agregar
-                    </Button>
-                  </CardFooter>
-                </form>
+
+                <CardContent className="space-y-4">
+                  <Button
+                    variant="secondary"
+                    onClick={async () => {
+                      if (!pid) return;
+                      const res = await fetch("/api/caregiver-invites", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ patientProfileId: pid }),
+                      });
+                      if (!res.ok)
+                        return toast({
+                          title: "Error",
+                          variant: "destructive",
+                        });
+                      const invite = await res.json();
+                      navigator.clipboard.writeText(invite.code);
+                      toast({
+                        title: "Código generado",
+                        description: `${invite.code} copiado al portapapeles`,
+                      });
+                      setLastInvite(invite);
+                      setCaregiverLoading(false);
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" /> Generar código
+                  </Button>
+                                      {lastInvite && (
+                      <div className="rounded-md border p-3 bg-muted/20 mt-2 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">Código:</span>
+                          <span className="font-mono tracking-widest text-lg">
+                            {lastInvite.code}
+                          </span>
+
+                          {/* Botón copiar */}
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() => {
+                              navigator.clipboard.writeText(lastInvite.code);
+                              toast({
+                                title: "Copiado",
+                                description: "Código en portapapeles",
+                              });
+                            }}
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+
+                        <p className="text-xs text-muted-foreground">
+                          Caduca:{" "}
+                          {format(
+                            new Date(lastInvite.expiresAt),
+                            "d 'de' MMMM yyyy · HH:mm"
+                          )}
+                        </p>
+                      </div>
+                    )}
+                </CardContent>
               </Card>
 
               {/* Lista cuidadores */}

@@ -1,116 +1,175 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useAuth } from "@/lib/auth-provider"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, Clock, Pill } from "lucide-react"
-import Link from "next/link"
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth-provider";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+} from "@/components/ui/alert";
+import { AlertCircle, Clock, Pill } from "lucide-react";
+import Link from "next/link";
+import { format, isValid, parseISO } from "date-fns";
+import { es } from "date-fns/locale";
+import { Badge } from "@/components/ui/badge";
+
+interface ApiMed {
+  id: number;
+  name: string;
+  dosage: string;
+  type: string;
+  frequency: "daily" | "weekly" | "custom";
+  startDate: string;
+  endDate?: string;
+  notes?: string;
+}
+interface Med extends ApiMed {
+  nextDose: Date;
+}
 
 export default function CaregiverMedicationsPage() {
-  const { user } = useAuth()
-  const [medications, setMedications] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { user, loading: authLoading } = useAuth();
+  const [meds, setMeds] = useState<Med[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (user?.role === "caregiver" && user?.patientId) {
-      const storedMedications = localStorage.getItem("medications")
-      if (storedMedications) {
-        setMedications(JSON.parse(storedMedications))
+    if (!authLoading && user?.role === "CAREGIVER") {
+      const pid = user.profileId;
+      if (!pid) {
+        console.warn("No profileId on caregiver");
+        setLoading(false);
+        return;
       }
-      setLoading(false)
-    }
-  }, [user])
 
-  if (loading) {
+      fetch(`/api/medications?patientProfileId=${pid}`)
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to load");
+          return res.json() as Promise<ApiMed[]>;
+        })
+        .then((data) => {
+          const validMeds: Med[] = data
+            .map((m) => ({
+              ...m,
+              nextDose: parseISO(m.startDate),
+            }))
+            .filter((m) => isValid(m.nextDose));
+          setMeds(validMeds);
+        })
+        .catch((err) => console.error("Error loading meds:", err))
+        .finally(() => setLoading(false));
+    }
+  }, [authLoading, user]);
+
+  if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <div className="animate-pulse text-center">
-          <p className="text-muted-foreground">Cargando medicamentos...</p>
-        </div>
+        <p className="text-muted-foreground">Cargando medicamentos…</p>
       </div>
-    )
+    );
   }
 
-  if (!user?.permissions?.viewMedications) {
+  if (user?.role !== "CAREGIVER") {
     return (
-      <Alert variant="destructive" className="mb-6">
-        <AlertCircle className="h-4 w-4" />
+      <Alert variant="destructive" className="m-4">
+        <AlertCircle className="mr-2" />
         <AlertTitle>Acceso Denegado</AlertTitle>
+        <AlertDescription>Sección solo para cuidadores.</AlertDescription>
+      </Alert>
+    );
+  }
+
+  if (!user.permissions?.viewMedications) {
+    return (
+      <Alert variant="destructive" className="m-4">
+        <AlertCircle className="mr-2" />
+        <AlertTitle>Permiso Denegado</AlertTitle>
         <AlertDescription>
-          No tiene permisos para ver los medicamentos. Por favor, contacte al paciente para solicitar acceso.
+          El paciente no le ha concedido permiso para ver sus medicamentos.
         </AlertDescription>
       </Alert>
-    )
+    );
   }
 
-  // Ordenar medicamentos por próxima dosis
-  const sortedMedications = [...medications].sort((a, b) => {
-    return new Date(a.nextDose).getTime() - new Date(b.nextDose).getTime()
-  })
+  // sort by nextDose ascending
+  const sorted = [...meds].sort(
+    (a, b) => a.nextDose.getTime() - b.nextDose.getTime()
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Medicamentos</h1>
-          <p className="text-muted-foreground">Medicamentos de {user.patientName || "Paciente"}</p>
-        </div>
-        {user.permissions?.manageMedications && (
-          <Button asChild>
-            <Link href="/dashboard/medications">Gestionar Medicamentos</Link>
-          </Button>
+    <div className="space-y-6 p-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">
+          Medicamentos de {user.patientName}
+        </h1>
+        {user.permissions.manageMedications && (
+          <Link href="/dashboard/medications" passHref>
+            <Button>Crear Medicamento</Button>
+          </Link>
         )}
       </div>
 
-      {medications.length > 0 ? (
+      {sorted.length === 0 ? (
+        <Card>
+          <CardContent className="text-center text-muted-foreground p-6">
+            No hay medicamentos registrados.
+          </CardContent>
+        </Card>
+      ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {sortedMedications.map((med, index) => (
-            <Card key={index} className="overflow-hidden">
+          {sorted.map((med) => (
+            <Card key={med.id}>
               <CardHeader className="bg-primary/5 pb-2">
-                <CardTitle className="flex items-center text-base">
-                  <Pill className="mr-2 h-4 w-4" />
-                  {med.name}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-4">
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Dosis:</span>
-                    <span className="text-sm">{med.dose}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Tipo:</span>
-                    <span className="text-sm">{med.type}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Frecuencia:</span>
-                    <span className="text-sm">
-                      {med.frequency === "daily" ? "Diaria" : med.frequency === "weekly" ? "Semanal" : "Personalizada"}
-                    </span>
-                  </div>
-                  <div className="pt-2 text-sm text-muted-foreground">
-                    <div className="flex items-center">
-                      <Clock className="mr-1 h-4 w-4" />
-                      <span>
-                        Próxima dosis: {new Date(med.nextDose).toLocaleDateString()} a las{" "}
-                        {new Date(med.nextDose).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                      </span>
-                    </div>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center text-base">
+                    <Pill className="mr-2 h-4 w-4" />
+                    {med.name}
+                  </CardTitle>
+                  <Badge variant="outline">
+                    {med.frequency === "daily"
+                      ? "Diaria"
+                      : med.frequency === "weekly"
+                      ? "Semanal"
+                      : "Personalizada"}
+                  </Badge>
                 </div>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm">Dosis:</span>
+                  <span className="text-sm">{med.dosage}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm">Tipo:</span>
+                  <span className="text-sm">{med.type}</span>
+                </div>
+                <div className="flex items-center text-sm text-muted-foreground pt-2">
+                  <Clock className="mr-1 h-4 w-4 flex-shrink-0" />
+                  <span>
+                    Próxima dosis:{" "}
+                    {format(med.nextDose, "d 'de' MMMM, yyyy", {
+                      locale: es,
+                    })}{" "}
+                    a las{" "}
+                    {format(med.nextDose, "HH:mm", { locale: es })}
+                  </span>
+                </div>
+                {med.notes && (
+                  <div className="mt-2 rounded-md bg-muted p-2 text-sm">
+                    {med.notes}
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
         </div>
-      ) : (
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-center text-muted-foreground">No hay medicamentos registrados</p>
-          </CardContent>
-        </Card>
       )}
     </div>
-  )
+  );
 }

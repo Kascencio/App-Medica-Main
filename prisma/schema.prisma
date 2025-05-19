@@ -47,15 +47,15 @@ model User {
 }
 
 model PatientProfile {
-  id     Int  @id @default(autoincrement())
-  name  String?
-  user   User @relation(fields: [userId], references: [id])
-  userId Int  @unique
-  age    Int
-  dateOfBirth      DateTime?
-  gender           String?
-  doctorName       String?
-  doctorContact    String?
+  id            Int       @id @default(autoincrement())
+  name          String?
+  user          User      @relation(fields: [userId], references: [id])
+  userId        Int       @unique
+  age           Int?
+  dateOfBirth   DateTime?
+  gender        String?
+  doctorName    String?
+  doctorContact String?
 
   appointments Appointment[]
   medications  Medication[]
@@ -63,8 +63,9 @@ model PatientProfile {
   notes        Note[]
   permissions  Permission[]  @relation("PatientPermissions")
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  CaregiverInvite CaregiverInvite[]
 }
 
 model Permission {
@@ -139,4 +140,18 @@ model Treatment {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model CaregiverInvite {
+  id               Int            @id @default(autoincrement())
+  code             String         @unique
+  patientProfile   PatientProfile @relation(fields: [patientProfileId], references: [id])
+  patientProfileId Int
+  expiresAt        DateTime
+  used             Boolean        @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([patientProfileId])
 }

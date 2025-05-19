@@ -1,159 +1,277 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { useAuth } from "@/lib/auth-provider"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, Calendar, MapPin } from "lucide-react"
-import Link from "next/link"
-import { format } from "date-fns"
-import { es } from "date-fns/locale"
-import { Badge } from "@/components/ui/badge"
+import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth-provider";
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverTrigger,
+  PopoverContent,
+} from "@/components/ui/popover";
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+} from "@/components/ui/alert";
+import { AlertCircle, Stethoscope, Calendar as CalendarIcon, Clock, MapPin, Trash2 } from "lucide-react";
+import { format } from "date-fns";
+import { es } from "date-fns/locale";
+import { cn } from "@/lib/utils";
+import { useToast } from "@/components/ui/use-toast";
+
+interface Appointment {
+  id: number;
+  doctorName: string;
+  specialty?: string;
+  dateTime: string;
+  location: string;
+  notes?: string;
+}
 
 export default function CaregiverAppointmentsPage() {
-  const { user } = useAuth()
-  const [appointments, setAppointments] = useState<any[]>([])
-  const [loading, setLoading] = useState(true)
+  const { user, loading: authLoading } = useAuth();
+  const { toast } = useToast();
+
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // new‐appointment form state
+  const [open, setOpen] = useState(false);
+  const [date, setDate] = useState<Date | undefined>(undefined);
+  const [form, setForm] = useState({
+    doctorName: "",
+    specialty: "",
+    location: "",
+    time: "",
+    notes: "",
+  });
+
+  // fetch all
+  const load = () => {
+    if (!user || user.role !== "CAREGIVER" || !user.profileId) {
+      setLoading(false);
+      return;
+    }
+    fetch(`/api/appointments?patientProfileId=${user.profileId}`)
+      .then(r => r.ok ? r.json() as Promise<Appointment[]> : Promise.reject())
+      .then(setAppointments)
+      .catch(err => {
+        console.error(err);
+        toast({ title: "Error", description: "No se pudieron cargar las citas", variant: "destructive" });
+      })
+      .finally(() => setLoading(false));
+  };
 
   useEffect(() => {
-    if (user?.role === "caregiver" && user?.patientId) {
-      const storedAppointments = localStorage.getItem("appointments")
-      if (storedAppointments) {
-        setAppointments(JSON.parse(storedAppointments))
-      }
-      setLoading(false)
-    }
-  }, [user])
+    if (!authLoading) load();
+  }, [authLoading, user]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-pulse text-center">
-          <p className="text-muted-foreground">Cargando citas...</p>
-        </div>
-      </div>
-    )
+  if (authLoading || loading) {
+    return <p className="text-center py-8">Cargando citas…</p>;
   }
 
-  if (!user?.permissions?.viewAppointments) {
+  if (user?.role !== "CAREGIVER") {
     return (
-      <Alert variant="destructive" className="mb-6">
-        <AlertCircle className="h-4 w-4" />
-        <AlertTitle>Acceso Denegado</AlertTitle>
+      <Alert variant="destructive" className="m-4">
+        <AlertCircle className="mr-2" />
+        Área de cuidadores solamente.
+      </Alert>
+    );
+  }
+
+  if (!user.permissions?.viewAppointments) {
+    return (
+      <Alert variant="destructive" className="m-4">
+        <AlertCircle className="mr-2" />
+        <AlertTitle>Sin permiso</AlertTitle>
         <AlertDescription>
-          No tiene permisos para ver las citas. Por favor, contacte al paciente para solicitar acceso.
+          Pide al paciente que te otorgue acceso a las citas.
         </AlertDescription>
       </Alert>
-    )
+    );
   }
 
-  // Ordenar citas por fecha
-  const sortedAppointments = [...appointments].sort((a, b) => {
-    return new Date(a.date).getTime() - new Date(b.date).getTime()
-  })
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm(f => ({ ...f, [e.target.name]: e.target.value }));
 
-  // Agrupar citas por mes
-  const groupedAppointments: Record<string, any[]> = {}
-
-  sortedAppointments.forEach((appointment) => {
-    const date = new Date(appointment.date)
-    const monthYear = format(date, "MMMM yyyy", { locale: es })
-
-    if (!groupedAppointments[monthYear]) {
-      groupedAppointments[monthYear] = []
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!date) {
+      toast({ title: "Error", description: "Selecciona fecha", variant: "destructive" });
+      return;
     }
+    const pid = user.profileId!;
+    // combine date + time
+    const [h, m] = form.time.split(":").map(Number);
+    const dt = new Date(date);
+    dt.setHours(h, m);
 
-    groupedAppointments[monthYear].push(appointment)
-  })
+    const body = {
+      patientProfileId: pid,
+      doctorName: form.doctorName,
+      specialty: form.specialty || undefined,
+      location: form.location,
+      dateTime: dt.toISOString(),
+      notes: form.notes || undefined,
+    };
 
-  // Determinar si una cita es próxima (en los próximos 3 días)
-  const isUpcoming = (date: string) => {
-    const appointmentDate = new Date(date)
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
+    const res = await fetch("/api/appointments", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      toast({ title: "Error", description: err.error || "No se pudo crear", variant: "destructive" });
+      return;
+    }
+    setOpen(false);
+    setForm({ doctorName: "", specialty: "", location: "", time: "", notes: "" });
+    setDate(undefined);
+    toast({ title: "Cita creada" });
+    load();
+  };
 
-    const threeDaysFromNow = new Date(today)
-    threeDaysFromNow.setDate(today.getDate() + 3)
+  const deleteAppt = async (id: number) => {
+    const res = await fetch(`/api/appointments/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" });
+      return;
+    }
+    toast({ title: "Cita eliminada" });
+    load();
+  };
 
-    return appointmentDate >= today && appointmentDate <= threeDaysFromNow
-  }
+  // group by month
+  const sorted = [...appointments].sort(
+    (a, b) => new Date(a.dateTime).getTime() - new Date(b.dateTime).getTime()
+  );
+  const grouped: Record<string, Appointment[]> = {};
+  sorted.forEach(a => {
+    const key = format(new Date(a.dateTime), "MMMM yyyy", { locale: es });
+    (grouped[key] ||= []).push(a);
+  });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Citas Médicas</h1>
-          <p className="text-muted-foreground">Citas de {user.patientName || "Paciente"}</p>
-        </div>
-        {user.permissions?.manageAppointments && (
-          <Button asChild>
-            <Link href="/dashboard/appointments">Gestionar Citas</Link>
-          </Button>
-        )}
+    <div className="space-y-6 p-4">
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Citas {user.patientName}</h1>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild>
+            <Button><Stethoscope className="mr-2" /> Agregar Cita</Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-md">
+            <form onSubmit={handleSubmit}>
+              <DialogHeader>
+                <DialogTitle>Nueva Cita</DialogTitle>
+                <DialogDescription>Completa la información</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label>Doctor</Label>
+                  <Input name="doctorName" value={form.doctorName} onChange={handleChange} required />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Especialidad</Label>
+                  <Input name="specialty" value={form.specialty} onChange={handleChange} />
+                </div>
+                <div className="grid gap-2">
+                  <Label>Ubicación</Label>
+                  <Input name="location" value={form.location} onChange={handleChange} required />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="grid gap-2">
+                    <Label>Fecha</Label>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" className={cn(!date && "text-muted-foreground", "justify-start")}>
+                          <CalendarIcon className="mr-2 h-4 w-4" />
+                          {date ? format(date, "PPP", { locale: es }) : "Seleccionar"}
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0">
+                        <Calendar mode="single" selected={date} onSelect={setDate} locale={es} />
+                      </PopoverContent>
+                    </Popover>
+                  </div>
+                  <div className="grid gap-2">
+                    <Label>Hora</Label>
+                    <Input type="time" name="time" value={form.time} onChange={handleChange} required />
+                  </div>
+                </div>
+                <div className="grid gap-2">
+                  <Label>Notas</Label>
+                  <Textarea name="notes" value={form.notes} onChange={handleChange} />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button type="submit">Guardar</Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
 
-      <div className="space-y-6">
-        {Object.keys(groupedAppointments).length > 0 ? (
-          Object.entries(groupedAppointments).map(([monthYear, monthAppointments]) => (
-            <div key={monthYear} className="space-y-4">
-              <h2 className="capitalize text-xl font-semibold">{monthYear}</h2>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {monthAppointments.map((appointment) => (
-                  <Card key={appointment.id} className="overflow-hidden">
-                    <CardHeader className="bg-primary/5 pb-2">
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="flex items-center text-base">
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {appointment.doctorName}
-                        </CardTitle>
-                        {isUpcoming(appointment.date) && (
-                          <Badge variant="secondary" className="ml-2">
-                            Próxima
-                          </Badge>
-                        )}
+      {Object.keys(grouped).map(monthYear => (
+        <div key={monthYear} className="space-y-4">
+          <h2 className="capitalize text-xl font-semibold">{monthYear}</h2>
+          <div className="space-y-4">
+            {grouped[monthYear].map(appt => {
+              const d = new Date(appt.dateTime);
+              return (
+                <Card key={appt.id}>
+                  <CardContent className="p-4 flex justify-between items-start">
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <Stethoscope className="text-primary" />
+                        <h3 className=" text-cyan-400">{appt.doctorName}</h3>
                       </div>
-                    </CardHeader>
-                    <CardContent className="p-4">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Especialidad:</span>
-                          <span className="text-sm">{appointment.specialty}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Fecha:</span>
-                          <span className="text-sm">
-                            {format(new Date(appointment.date), "d 'de' MMMM, yyyy", { locale: es })}
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium">Hora:</span>
-                          <span className="text-sm">{appointment.time}</span>
-                        </div>
-                        <div className="flex items-center text-sm text-muted-foreground pt-2">
-                          <MapPin className="mr-1 h-4 w-4 flex-shrink-0" />
-                          <span>{appointment.location}</span>
-                        </div>
-                        {appointment.notes && (
-                          <div className="mt-2 rounded-md bg-muted p-2">
-                            <p className="text-xs">{appointment.notes}</p>
-                          </div>
-                        )}
+                      {appt.specialty && <p className="text-sm text-muted-foreground">{appt.specialty}</p>}
+                      <div className="text-sm text-muted-foreground flex space-x-4">
+                        <span>
+                          <CalendarIcon className="inline mr-1" />
+                          {format(d, "EEEE, d 'de' MMMM yyyy", { locale: es })}
+                        </span>
+                        <span>
+                          <Clock className="inline mr-1" />
+                          {format(d, "HH:mm", { locale: es })}
+                        </span>
+                        <span>
+                          <MapPin className="inline mr-1" />
+                          {appt.location}
+                        </span>
                       </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          ))
-        ) : (
-          <Card>
-            <CardContent className="p-6">
-              <p className="text-center text-muted-foreground">No hay citas médicas registradas</p>
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                      {appt.notes && <p className="mt-2 text-sm bg-muted p-2 rounded">{appt.notes}</p>}
+                    </div>
+                    <Button variant="ghost" size="icon" className="text-destructive" onClick={() => deleteAppt(appt.id)}>
+                      <Trash2 />
+                    </Button>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
-  )
+  );
 }

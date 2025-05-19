@@ -79,7 +79,7 @@ export default function LoginPage() {
 
   /* ------------------------------ UI ------------------------------ */
   return (
-    <div className="container flex min-h-screen items-center justify-center px-4 py-8">
+    <div className="container flex min-h-screen items-center justify-center px-4 py-8 dark">
       <Card className="mx-auto w-full max-w-md">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl font-bold">

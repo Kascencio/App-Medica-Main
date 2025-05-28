@@ -17,8 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Heart, Zap } from "lucide-react"
+import { PasswordValidator } from "@/components/password-validator"
 import { useToast } from "@/components/ui/use-toast";
-import { Eye, EyeOff, User, Lock } from "lucide-react";
+import { Eye, EyeOff, User, Lock, Activity, Shield, X} from "lucide-react";
 
 export default function LoginPage() {
   /* ---------------------------------------------------------- */
@@ -32,6 +34,7 @@ export default function LoginPage() {
     inviteCode: "",
   });
 
+  const [isPasswordValid, setIsPasswordValid] = useState(false)
   const { login, register } = useAuth();
   const router = useRouter();
   const { toast } = useToast();
@@ -79,14 +82,32 @@ export default function LoginPage() {
 
   /* ------------------------------ UI ------------------------------ */
   return (
-    <div className="container flex min-h-screen items-center justify-center px-4 py-8 dark">
+    <div className="min-h-screen bg-gradient-to-br from-medical-50 via-blue-50 to-health-50 flex items-center justify-center p-4">
+       <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-40 -right-40 w-80 h-80 bg-medical-200/30 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-health-200/30 rounded-full blur-3xl"></div>
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-blue-100/20 rounded-full blur-3xl"></div>
+      </div>
+      
+      <div className="relative z-10 w-full max-w-md">
+        {/* Header con logo y título */}
+        <div className="text-center mb-8 animate-fade-in">
+          <div className="flex justify-center mb-4">
+            <div className="medical-icon relative">
+              <Heart className="h-8 w-8" />
+              <div className="absolute -top-1 -right-1">
+                <Zap className="h-4 w-4 text-yellow-400" />
+              </div>
+            </div>
+          </div>
+          <h1 className="text-3xl font-bold bg-gradient-medical bg-clip-text text-transparent">CuraByte</h1>
+          <p className="text-slate-600 mt-2">Tu salud, inteligentemente gestionada</p>
+        </div>
       <Card className="mx-auto w-full max-w-md">
-        <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl font-bold">
-            Agenda Electrónica Médica
-          </CardTitle>
-          <CardDescription>Para pacientes y cuidadores</CardDescription>
-        </CardHeader>
+          <CardHeader className="space-y-1 text-center pb-4">
+            <CardTitle className="text-2xl font-bold text-slate-800">Bienvenido a CuraByte</CardTitle>
+            <CardDescription className="text-slate-600">Accede a tu agenda médica inteligente</CardDescription>
+          </CardHeader>
 
         <Tabs defaultValue="login" className="w-full">
           <TabsList className="grid w-full grid-cols-2">
@@ -195,53 +216,47 @@ export default function LoginPage() {
                 <div className="space-y-2">
                   <Label htmlFor="register-password">Contraseña</Label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="register-password"
-                      type={showPassword ? "text" : "password"}
-                      className="pl-10 pr-10"
-                      value={registerData.password}
-                      onChange={(e) =>
-                        setRegisterData({
-                          ...registerData,
-                          password: e.target.value,
-                        })
-                      }
-                      required
+                    <PasswordValidator
+                      password={registerData.password}
+                      onPasswordChange={(password) => setRegisterData({ ...registerData, password })}
+                      onValidationChange={setIsPasswordValid}
+                      placeholder="Crea una contraseña segura"
                     />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="absolute right-0 top-0 h-full px-3 py-2 text-muted-foreground"
-                      onClick={() => setShowPassword((s) => !s)}
-                      aria-label="Mostrar/ocultar"
-                    >
-                      {showPassword ? (
-                        <EyeOff className="h-4 w-4" />
-                      ) : (
-                        <Eye className="h-4 w-4" />
-                      )}
-                    </Button>
                   </div>
                 </div>
 
                 {/* confirm */}
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirmar Contraseña</Label>
-                  <Input
-                    id="confirm-password"
-                    type={showPassword ? "text" : "password"}
-                    value={registerData.confirmPassword}
-                    onChange={(e) =>
-                      setRegisterData({
-                        ...registerData,
-                        confirmPassword: e.target.value,
-                      })
-                    }
-                    required
-                  />
-                </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="confirm-password" className="text-slate-700 font-medium">
+                      Confirmar Contraseña
+                    </Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                      <Input
+                        id="confirm-password"
+                        type="password"
+                        placeholder="Confirma tu contraseña"
+                        className="pl-10 border-slate-200 focus:border-health-400 focus:ring-health-400/20"
+                        value={registerData.confirmPassword}
+                        onChange={(e) => setRegisterData({ ...registerData, confirmPassword: e.target.value })}
+                        required
+                      />
+                    </div>
+                    {registerData.confirmPassword && registerData.password !== registerData.confirmPassword && (
+                      <p className="text-xs text-red-600 flex items-center mt-1">
+                        <X className="h-3 w-3 mr-1" />
+                        Las contraseñas no coinciden
+                      </p>
+                    )}
+                    {registerData.confirmPassword &&
+                      registerData.password === registerData.confirmPassword &&
+                      registerData.password.length > 0 && (
+                        <p className="text-xs text-green-600 flex items-center mt-1">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Las contraseñas coinciden
+                        </p>
+                      )}
+                  </div>
 
                 {/* role */}
                 <div className="space-y-2">
@@ -292,6 +307,27 @@ export default function LoginPage() {
           </TabsContent>
         </Tabs>
       </Card>
+              <div className="mt-8 grid grid-cols-3 gap-4 animate-fade-in">
+          <div className="text-center">
+            <div className="medical-icon mx-auto mb-2">
+              <Heart className="h-5 w-5" />
+            </div>
+            <p className="text-xs text-slate-600">Seguro</p>
+          </div>
+          <div className="text-center">
+            <div className="health-icon mx-auto mb-2">
+              <Activity className="h-5 w-5" />
+            </div>
+            <p className="text-xs text-slate-600">Inteligente</p>
+          </div>
+          <div className="text-center">
+            <div className="warning-icon mx-auto mb-2">
+              <Shield className="h-5 w-5" />
+            </div>
+            <p className="text-xs text-slate-600">Confiable</p>
+          </div>
+        </div>
+    </div>
     </div>
   );
 }

@@ -48,12 +48,148 @@
     --ring: 224.3 76.3% 48%;
   }
 }
-
 @layer base {
   * {
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 text-foreground min-h-screen;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Scrollbar personalizado */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slate-100;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-slate-300 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-slate-400;
+  }
+}
+
+@layer components {
+  .medical-card {
+    @apply bg-white/80 backdrop-blur-sm border border-white/20 shadow-medical hover:shadow-card-hover transition-all duration-300 rounded-xl;
+  }
+
+  .medical-button {
+    @apply bg-gradient-medical text-white shadow-medical hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200;
+  }
+
+  .health-button {
+    @apply bg-gradient-health text-white shadow-health hover:shadow-lg transform hover:-translate-y-0.5 transition-all duration-200;
+  }
+
+  .glass-effect {
+    @apply bg-white/10 backdrop-blur-md border border-white/20;
+  }
+
+  .medical-gradient {
+    @apply bg-gradient-medical;
+  }
+
+  .health-gradient {
+    @apply bg-gradient-health;
+  }
+
+  .sidebar-gradient {
+    @apply bg-gradient-sidebar;
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.6s ease-out forwards;
+  }
+
+  @keyframes fade-in-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .medical-icon {
+    @apply p-3 rounded-xl bg-gradient-medical text-white shadow-medical;
+  }
+
+  .health-icon {
+    @apply p-3 rounded-xl bg-gradient-health text-white shadow-health;
+  }
+
+  .warning-icon {
+    @apply p-3 rounded-xl bg-gradient-to-br from-warning-400 to-warning-500 text-white shadow-lg;
+  }
+
+  .danger-icon {
+    @apply p-3 rounded-xl bg-gradient-to-br from-danger-400 to-danger-500 text-white shadow-lg;
+  }
+}
+@layer utilities {
+  .shadow-medical {
+    @apply shadow-lg shadow-blue-500/50;
+  }
+
+  .shadow-health {
+    @apply shadow-lg shadow-green-500/50;
+  }
+
+  .shadow-card-hover {
+    @apply shadow-xl shadow-blue-500/30;
+  }
+
+  .bg-gradient-medical {
+    @apply bg-gradient-to-r from-blue-400 to-blue-600;
+  }
+
+  .bg-gradient-health {
+    @apply bg-gradient-to-r from-green-400 to-green-600;
+  }
+
+  .bg-gradient-sidebar {
+    @apply bg-gradient-to-b from-gray-800 to-gray-900;
+  }
+}
+@layer utilities {
+  .text-medical {
+    @apply text-blue-600;
+  }
+
+  .text-health {
+    @apply text-green-600;
+  }
+
+  .text-warning {
+    @apply text-yellow-500;
+  }
+
+  .text-danger {
+    @apply text-red-500;
+  }
+
+  .bg-medical {
+    @apply bg-blue-100;
+  }
+
+  .bg-health {
+    @apply bg-green-100;
+  }
+
+  .bg-warning {
+    @apply bg-yellow-100;
+  }
+
+  .bg-danger {
+    @apply bg-red-100;
   }
 }

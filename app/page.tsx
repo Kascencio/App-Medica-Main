@@ -25,7 +25,7 @@ export default function Home() {
   }, [isAuthenticated, loading, router, user])
 
   return (
-    <main className="flex min-h-screen items-center justify-center dark">
+    <main className="flex min-h-screen items-center justify-center">
       <div className="animate-pulse text-center">
         <h1 className="text-2xl font-bold">Agenda Electrónica Médica</h1>
         <p className="text-muted-foreground">Cargando...</p>

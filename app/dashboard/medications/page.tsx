@@ -1,4 +1,3 @@
-// app/dashboard/medications/page.tsx
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -7,11 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  Card,
-  CardHeader,
-  CardContent,
-} from "@/components/ui/card";
+import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import {
   Dialog,
   DialogTrigger,
@@ -38,13 +33,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
-import {
-  CalendarIcon,
-  Pill,
-  Plus,
-  Edit3,
-  Trash2,
-} from "lucide-react";
+import { CalendarIcon, Pill, Plus, Edit3, Trash2 } from "lucide-react";
 
 interface MedicationData {
   id: number;
@@ -61,14 +50,10 @@ export default function MedicationsPage() {
   const { user, loading: authLoading } = useAuth();
   const toast = useToast().toast;
 
-  // patientProfileId for this user
   const pid = user?.profileId;
-
-  // global list & loading state
   const [meds, setMeds] = useState<MedicationData[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // ─── Fetch ─────────────────────────────────────────────────────────
   const fetchMedications = async () => {
     if (!pid) return;
     setLoading(true);
@@ -79,11 +64,7 @@ export default function MedicationsPage() {
       setMeds(data);
     } catch (err) {
       console.error(err);
-      toast({
-        title: "Error",
-        description: "No se pudieron cargar los medicamentos",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudieron cargar los medicamentos", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -95,43 +76,31 @@ export default function MedicationsPage() {
 
   // ─── Create Dialog State ────────────────────────────────────────────
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({
-    name: "",
-    dosage: "",
-    type: "",
-    frequency: "daily" as "daily" | "weekly" | "custom",
-  });
+  const [createForm, setCreateForm] = useState({ name: "", dosage: "", type: "", frequency: "daily" as "daily" | "weekly" | "custom" });
   const [createStart, setCreateStart] = useState<Date>();
+  const [createTime, setCreateTime] = useState<string>("");
 
   const resetCreate = () => {
-    setCreateForm({
-      name: "",
-      dosage: "",
-      type: "",
-      frequency: "daily",
-    });
+    setCreateForm({ name: "", dosage: "", type: "", frequency: "daily" });
     setCreateStart(undefined);
+    setCreateTime("");
   };
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!pid || !createStart) {
-      toast({
-        title: "Error",
-        description: "Complete todos los campos",
-        variant: "destructive",
-      });
+    if (!pid || !createStart || !createTime) {
+      toast({ title: "Error", description: "Complete todos los campos", variant: "destructive" });
       return;
     }
+    const [h, m] = createTime.split(":").map(Number);
+    const dt = new Date(createStart);
+    dt.setHours(h, m);
+
     try {
       const res = await fetch("/api/medications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          patientProfileId: pid,
-          ...createForm,
-          startDate: createStart.toISOString(),
-        }),
+        body: JSON.stringify({ patientProfileId: pid, ...createForm, startDate: dt.toISOString() }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -149,32 +118,31 @@ export default function MedicationsPage() {
   // ─── Edit Dialog State ──────────────────────────────────────────────
   const [editOpen, setEditOpen] = useState(false);
   const [medToEdit, setMedToEdit] = useState<MedicationData | null>(null);
-  const [editForm, setEditForm] = useState(createForm);
+  const [editForm, setEditForm] = useState({ name: "", dosage: "", type: "", frequency: "daily" as "daily" | "weekly" | "custom" });
   const [editStart, setEditStart] = useState<Date>();
+  const [editTime, setEditTime] = useState<string>("");
 
   const openEdit = (med: MedicationData) => {
     setMedToEdit(med);
-    setEditForm({
-      name: med.name,
-      dosage: med.dosage,
-      type: med.type,
-      frequency: med.frequency,
-    });
-    setEditStart(new Date(med.startDate));
+    setEditForm({ name: med.name, dosage: med.dosage, type: med.type, frequency: med.frequency });
+    const dt = new Date(med.startDate);
+    setEditStart(dt);
+    setEditTime(dt.toTimeString().slice(0,5));
     setEditOpen(true);
   };
 
   const handleEdit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!medToEdit || !editStart) return;
+    if (!medToEdit || !editStart || !editTime) return;
+    const [h, m] = editTime.split(":").map(Number);
+    const dt = new Date(editStart);
+    dt.setHours(h, m);
+
     try {
       const res = await fetch(`/api/medications/${medToEdit.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...editForm,
-          startDate: editStart.toISOString(),
-        }),
+        body: JSON.stringify({ ...editForm, startDate: dt.toISOString() }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));
@@ -193,27 +161,20 @@ export default function MedicationsPage() {
     try {
       const res = await fetch(`/api/medications/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
-      setMeds((ms) => ms.filter((m) => m.id !== id));
+      setMeds(ms => ms.filter(m => m.id !== id));
       toast({ title: "Medicamento eliminado" });
     } catch {
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" });
     }
   };
 
-  // ─── Render ─────────────────────────────────────────────────────────
   if (authLoading || loading) {
     return <p className="p-8 text-center text-muted-foreground">Cargando…</p>;
   }
-
   return (
     <div className="space-y-6 p-4">
       {/* Header + Create */}
       <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">Mis Medicamentos</h1>
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button>
@@ -304,6 +265,13 @@ export default function MedicationsPage() {
                     </PopoverContent>
                   </Popover>
                 </div>
+                <Label>Hora</Label>
+                <Input
+                  type="time"
+                  value={createTime}
+                  onChange={(e) => setCreateTime(e.target.value)}
+                  required
+                />
                 <div>
                   <Label>Notas</Label>
                   <Textarea
@@ -408,6 +376,13 @@ export default function MedicationsPage() {
                     />
                   </PopoverContent>
                 </Popover>
+                 <Label>Hora</Label>
+                <Input
+                  type="time"
+                  value={createTime}
+                  onChange={(e) => setEditTime(e.target.value)}
+                  required
+                />
               </div>
               <div>
                 <Label>Notas</Label>
@@ -459,6 +434,8 @@ export default function MedicationsPage() {
               <div className="flex justify-between">
                 <span className="text-sm">Dosis:</span>
                 <span className="text-sm">{med.dosage}</span>
+                <span className="text-sm">Hora:</span>
+                <span className="text-sm">{format(new Date(med.startDate), "HH:mm")}</span>
               </div>
               <div className="flex items-center text-sm text-muted-foreground pt-2">
                 <span>

@@ -93,11 +93,8 @@ export default function LoginPage() {
         {/* Header con logo y título */}
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex justify-center mb-4">
-            <div className="medical-icon relative">
-              <Heart className="h-8 w-8" />
-              <div className="absolute -top-1 -right-1">
-                <Zap className="h-4 w-4 text-yellow-400" />
-              </div>
+            <div className="flex items-center justify-center w-24 h-24 bg-gradient-medical rounded-full shadow-sm">
+            <img src="/img/logo-cur.webp" alt="Logo-curabyte" className="rounded-full w-full" />
             </div>
           </div>
           <h1 className="text-3xl font-bold bg-gradient-medical bg-clip-text text-transparent">CuraByte</h1>

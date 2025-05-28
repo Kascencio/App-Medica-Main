@@ -90,3 +90,13 @@ export async function DELETE(
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: { id: string } }
+) {
+  const id = idSchema.parse(params.id);
+  const med = await prisma.medication.findUnique({ where: { id } });
+  if (!med) return NextResponse.json({ error: "No encontrado" }, { status: 404 });
+  return NextResponse.json(med);
+}

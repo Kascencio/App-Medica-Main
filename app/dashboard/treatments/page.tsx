@@ -318,7 +318,7 @@ export default function TreatmentsPage() {
 
       {/* Dialogo de edición */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="-mt-36 max-h-[58vh] overflow-y-auto">
+        <DialogContent className="-mt-36 max-h-[54vh] overflow-y-auto">
           <form onSubmit={handleEditSubmit}>
             <DialogHeader>
               <DialogTitle>Editar Tratamiento</DialogTitle>

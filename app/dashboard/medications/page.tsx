@@ -296,7 +296,7 @@ export default function MedicationsPage() {
           {/* we'll open programmatically via openEdit() */}
           <span />
         </DialogTrigger>
-        <DialogContent className="-mt-36 max-h-[58vh] overflow-y-auto">
+        <DialogContent className="-mt-36 max-h-[54vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Medicamento</DialogTitle>
           </DialogHeader>

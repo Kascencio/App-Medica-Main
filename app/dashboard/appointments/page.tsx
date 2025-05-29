@@ -289,7 +289,7 @@ export default function AppointmentsPage() {
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogTrigger asChild><span /></DialogTrigger>
-        <DialogContent className="-mt-32 max-h-[58vh] overflow-y-auto">
+        <DialogContent className="-mt-32 max-h-[54vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Cita</DialogTitle>
           </DialogHeader>

@@ -248,7 +248,7 @@ export default function SettingsPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Configuración</h1>
       <Tabs defaultValue="account">
-        <TabsList className="flex w-full flex-col sm:flex-row">
+        <TabsList className="flex w-full flex-row sm:flex-row">
           <TabsTrigger value="account">Cuenta</TabsTrigger>
           <TabsTrigger value="caregivers">Cuidadores</TabsTrigger>
           <TabsTrigger value="notifications">Notificaciones</TabsTrigger>

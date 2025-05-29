@@ -289,7 +289,7 @@ export default function AppointmentsPage() {
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogTrigger asChild><span /></DialogTrigger>
-        <DialogContent>
+        <DialogContent className="-mt-24 max-h-[67vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Cita</DialogTitle>
           </DialogHeader>
@@ -319,7 +319,7 @@ export default function AppointmentsPage() {
                   required
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <div>
                   <Label>Fecha</Label>
                   <Popover>

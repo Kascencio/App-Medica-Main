@@ -318,7 +318,7 @@ export default function TreatmentsPage() {
 
       {/* Dialogo de edición */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="-mt-24 max-h-[67vh] overflow-y-auto">
           <form onSubmit={handleEditSubmit}>
             <DialogHeader>
               <DialogTitle>Editar Tratamiento</DialogTitle>
@@ -340,14 +340,16 @@ export default function TreatmentsPage() {
                 onChange={(e) => setEditForm(f => ({ ...f, description: e.target.value }))}
               />
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 gap-4">
                 <Popover>
+                   <span>Fecha de inicio</span>
                   <PopoverTrigger asChild>
+                   
                     <Button
                       variant="outline"
                       className={cn("justify-start", !editStart && "text-muted-foreground")}
                     >
-                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      <CalendarIcon className="mr-1 h-2 w-2" />
                       {editStart ? format(editStart, "PPP", { locale: es }) : "Inicio"}
                     </Button>
                   </PopoverTrigger>
@@ -357,6 +359,7 @@ export default function TreatmentsPage() {
                 </Popover>
 
                 <Popover>
+                     <span>Fecha de finalización</span>
                   <PopoverTrigger asChild>
                     <Button
                       variant="outline"

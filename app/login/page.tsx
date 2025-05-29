@@ -97,12 +97,12 @@ export default function LoginPage() {
             <img src="/img/logo-cur.webp" alt="Logo-curabyte" className="rounded-full w-full" />
             </div>
           </div>
-          <h1 className="text-3xl font-bold bg-gradient-medical bg-clip-text text-transparent">CuraByte</h1>
+          <h1 className="text-3xl font-bold bg-gradient-medical bg-clip-text text-transparent">RecuerdaMed</h1>
           <p className="text-slate-600 mt-2">Tu salud, inteligentemente gestionada</p>
         </div>
       <Card className="mx-auto w-full max-w-md">
           <CardHeader className="space-y-1 text-center pb-4">
-            <CardTitle className="text-2xl font-bold text-slate-800">Bienvenido a CuraByte</CardTitle>
+            <CardTitle className="text-2xl font-bold text-slate-800">Bienvenido a RecuerdaMed</CardTitle>
             <CardDescription className="text-slate-600">Accede a tu agenda médica inteligente</CardDescription>
           </CardHeader>
 

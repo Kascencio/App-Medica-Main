@@ -135,7 +135,7 @@ export default function DashboardPage() {
         <div className="flex items-center justify-between animate-fade-in">
           <div>
             <h1 className="text-3xl font-bold bg-gradient-medical bg-clip-text text-transparent flex items-center">
-              ¡Bienvenido a CuraByte!
+              ¡Bienvenido a RecuerdaMed!
               <Zap className="h-8 w-8 text-yellow-500 ml-2" />
             </h1>
             <p className="text-slate-600 mt-1">Tu salud, inteligentemente gestionada</p>

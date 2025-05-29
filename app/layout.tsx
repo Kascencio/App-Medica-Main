@@ -10,9 +10,17 @@ import { ThemeToggle } from "@/components/ui/ThemeToggle"
 const inter = Inter({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "Agenda Electrónica Médica",
+  title: "RecuerdaMed",
   description: "Aplicación para gestionar tratamientos médicos en el hogar",
-  generator: 'v0.dev'
+  generator: 'Next.js',
+  applicationName: "RecuerdaMed",
+  keywords: [
+    "agenda médica",
+    "tratamientos médicos",
+    "cuidado en el hogar",
+    "recordatorios de medicación",
+    "gestión de salud"
+  ]
 }
 
 export default function RootLayout({
@@ -27,7 +35,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#0ea5e9" />
       </head>
       <body className={inter.className}>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
           <AuthProvider>
             <Toaster />
             {children}

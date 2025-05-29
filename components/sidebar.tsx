@@ -190,7 +190,7 @@ export function Sidebar() {
               </div>
             </div>
             <div>
-              <span className="text-lg font-bold text-white">CuraByte</span>
+              <span className="text-lg font-bold text-white">RecuerdaMed</span>
               <p className="text-xs text-slate-300">Salud inteligente</p>
             </div>
           </div>

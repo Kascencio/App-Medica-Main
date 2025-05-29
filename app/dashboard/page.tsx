@@ -152,7 +152,7 @@ export default function DashboardPage() {
             </div>
             <h3 className="text-xl font-semibold text-slate-800 mb-2">Completa tu perfil médico</h3>
             <p className="text-slate-600 text-center mb-6">
-              Para comenzar a usar todas las funciones inteligentes de CuraByte, necesitamos algunos datos básicos sobre
+              Para comenzar a usar todas las funciones inteligentes de RecuerdaMed, necesitamos algunos datos básicos sobre
               tu salud
             </p>
             <Button asChild className="medical-button">
@@ -174,7 +174,7 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between animate-fade-in">
         <div>
           <h1 className="text-3xl font-bold bg-gradient-medical bg-clip-text text-transparent flex items-center">
-            ¡Bienvenido a CuraByte!
+            ¡Bienvenido a RecuerdaMed!
             <Zap className="h-8 w-8 text-yellow-500 ml-2" />
           </h1>
           <p className="text-slate-600 mt-1">Tu salud, inteligentemente gestionada</p>
@@ -237,18 +237,19 @@ export default function DashboardPage() {
         {/* Medicamentos próximos */}
         <Card className="medical-card">
           <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xl font-semibold text-slate-800 flex items-center">
+            <div className="flex flex-wrap items-center justify-between">
+              <CardTitle className="text-lg font-semibold text-slate-800 flex items-center">
                 <div className="medical-icon mr-3">
                   <Pill className="h-5 w-5" />
                 </div>
-                Medicamentos de Hoy
+                Medicamentos 
+                de Hoy
               </CardTitle>
               <Button
                 variant="outline"
                 size="sm"
                 asChild
-                className="border-medical-200 text-medical-600 hover:bg-medical-50"
+                className="border-medical-200 text-medical-600 hover:bg-medical-50 my-3"
               >
                 <Link href="/dashboard/medications">Ver Todos</Link>
               </Button>
@@ -294,7 +295,7 @@ export default function DashboardPage() {
         {/* Citas próximas */}
         <Card className="medical-card">
           <CardHeader className="pb-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between">
               <CardTitle className="text-xl font-semibold text-slate-800 flex items-center">
                 <div className="health-icon mr-3">
                   <Calendar className="h-5 w-5" />
@@ -305,7 +306,7 @@ export default function DashboardPage() {
                 variant="outline"
                 size="sm"
                 asChild
-                className="border-health-200 text-health-600 hover:bg-health-50"
+                className="border-health-200 text-health-600 hover:bg-health-50 my-3"
               >
                 <Link href="/dashboard/appointments">Ver Todas</Link>
               </Button>

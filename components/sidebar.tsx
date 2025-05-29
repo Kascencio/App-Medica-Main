@@ -165,7 +165,7 @@ export function Sidebar() {
               </div>
             </div>
             <span className="text-lg font-bold bg-gradient-medical bg-clip-text text-transparent">
-              CuraByte
+              RecuerdaMed
             </span>
           </div>
         </div>

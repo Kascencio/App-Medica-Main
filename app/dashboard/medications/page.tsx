@@ -379,7 +379,7 @@ export default function MedicationsPage() {
                  <Label>Hora</Label>
                 <Input
                   type="time"
-                  value={createTime}
+                  value={editTime}
                   onChange={(e) => setEditTime(e.target.value)}
                   required
                 />

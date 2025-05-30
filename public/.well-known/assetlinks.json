@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.mimedica.appmedica",
+      "sha256_cert_fingerprints": [
+        "F5:D5:4D:01:48:33:CA:B8:10:74:56:71:77:1B:B3:7E:EB:AE:6C:C3:59:72:85:79:E7:94:F9:87:A1:1B:4C:B3"
+      ]
+    }
+  }
+]

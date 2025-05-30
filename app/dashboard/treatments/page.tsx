@@ -193,7 +193,7 @@ export default function TreatmentsPage() {
             </Button>
           </DialogTrigger>
 
-          <DialogContent className="sm:max-w-[500px]">
+          <DialogContent className="-mt-28 max-h-[50vh] overflow-y-auto">
             <form onSubmit={save}>
               <DialogHeader>
                 <DialogTitle>Nuevo Tratamiento</DialogTitle>

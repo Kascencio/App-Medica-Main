@@ -181,7 +181,7 @@ export default function MedicationsPage() {
               <Plus className="mr-2 h-4 w-4" /> Nuevo
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent className="-mt-36 max-h-[54vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle>Agregar Medicamento</DialogTitle>
               <DialogDescription>

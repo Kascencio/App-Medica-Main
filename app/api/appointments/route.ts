@@ -4,12 +4,12 @@ import { z } from 'zod'
 
 const createSchema = z.object({
   patientProfileId: z.number(),
-  caregiverId: z.number().optional(),
-  title: z.string(),
-  description: z.string().optional(),
-  dateTime: z.date(), // Cambiamos a tipo date
-  location: z.string().optional(),
-  status: z.enum(['SCHEDULED', 'COMPLETED', 'CANCELLED']).default('SCHEDULED')
+  caregiverId:      z.number().optional(),
+  title:            z.string(),
+  description:      z.string().optional(),
+  dateTime:         z.date(),
+  location:         z.string().optional(),
+  status:           z.enum(['SCHEDULED', 'COMPLETED', 'CANCELLED']).default('SCHEDULED'),
 })
 
 // GET con filtros opcionales por patientProfileId
@@ -35,8 +35,8 @@ export async function POST(req: NextRequest) {
     const appointmentData = {
       patientProfileId: body.patientProfileId,
       caregiverId: body.caregiverId,
-      title: body.doctorName, // Usamos doctorName como título
-      description: `${body.specialty ? `Especialidad: ${body.specialty}\n` : ''}${body.notes || ''}`.trim(),
+     title:            body.title,           // viene de form.doctorName
+      description:      body.description,
       dateTime: new Date(body.dateTime),
       location: body.location,
       status: 'SCHEDULED'
@@ -50,7 +50,6 @@ export async function POST(req: NextRequest) {
       id: created.id,
       patientProfileId: created.patientProfileId,
       doctorName: created.title,
-      specialty: body.specialty || '',
       location: created.location || '',
       date: created.dateTime.toISOString(),
       time: body.time,

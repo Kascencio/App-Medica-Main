@@ -12,6 +12,7 @@ webPush.setVapidDetails(
   VAPID_PRIVATE
 );
 
+
 export async function POST(req: NextRequest) {
   try {
     const { title, body } = await req.json();

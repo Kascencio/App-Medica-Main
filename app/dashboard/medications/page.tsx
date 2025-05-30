@@ -63,38 +63,47 @@ export default function MedicationsPage() {
     }
   }, []);
 
-  useEffect(() => {
-    console.log("Agendando notificaciones para medicamentos:", meds);
+// ─── Notificaciones push via servidor ────────────────────────────────
+useEffect(() => {
+  notificationTimeouts.current.forEach(clearTimeout);
+  notificationTimeouts.current = [];
+
+  meds.forEach((med) => {
+    const notifyTime = new Date(med.startDate).getTime();
+    const delay = notifyTime - Date.now();
+    if (delay > 0) {
+      const t = setTimeout(async () => {
+        // 1) Llamada al servidor para enviar el push
+        try {
+          await fetch('/api/sendPush', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              title: `Hora de tomar: ${med.name}`,
+              body: `Dosis: ${med.dosage}`
+            })
+          });
+        } catch (err) {
+          console.error('Error enviando push:', err);
+        }
+
+        // 2) Toast local como respaldo
+        toast({
+          title: `Hora de tomar: ${med.name}`,
+          description: `Dosis: ${med.dosage}`,
+        });
+      }, delay);
+
+      notificationTimeouts.current.push(t);
+    }
+  });
+
+  return () => {
     notificationTimeouts.current.forEach(clearTimeout);
     notificationTimeouts.current = [];
+  };
+}, [meds, toast]);
 
-    meds.forEach((med) => {
-      const notifyTime = new Date(med.startDate).getTime();
-      const delay = notifyTime - Date.now();
-      console.log(`Medicación ${med.name}, notifyTime=${new Date(med.startDate)}, delay=${delay}`);
-      if (delay > 0) {
-        const t = setTimeout(() => {
-          console.log(`Disparando notificación para ${med.name}`);
-          // Always show toast, and system notification if permitted
-          if (Notification.permission === "granted") {
-            new Notification(`Hora de tomar: ${med.name}`, {
-              body: `Dosis: ${med.dosage}`,
-            });
-          }
-          toast({
-            title: `Hora de tomar: ${med.name}`,
-            description: `Dosis: ${med.dosage}`,
-          });
-        }, delay);
-        notificationTimeouts.current.push(t);
-      }
-    });
-
-    return () => {
-      notificationTimeouts.current.forEach(clearTimeout);
-      notificationTimeouts.current = [];
-    };
-  }, [meds, toast]);
 
   // ─── Fetch medicamentos ───────────────────────────────────────────────
   const fetchMedications = async () => {

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-provider";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,9 +29,9 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast"
 import { es } from "date-fns/locale";
 import { CalendarIcon, Pill, Plus, Edit3, Trash2 } from "lucide-react";
 
@@ -54,14 +54,56 @@ export default function MedicationsPage() {
   const [meds, setMeds] = useState<MedicationData[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // ─── Notificaciones locales ──────────────────────────────────────────
+  const notificationTimeouts = useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  useEffect(() => {
+    if (typeof Notification !== "undefined" && Notification.permission !== "granted") {
+      Notification.requestPermission().then((perm) => console.log("Notification permission:", perm));
+    }
+  }, []);
+
+  useEffect(() => {
+    console.log("Agendando notificaciones para medicamentos:", meds);
+    notificationTimeouts.current.forEach(clearTimeout);
+    notificationTimeouts.current = [];
+
+    meds.forEach((med) => {
+      const notifyTime = new Date(med.startDate).getTime();
+      const delay = notifyTime - Date.now();
+      console.log(`Medicación ${med.name}, notifyTime=${new Date(med.startDate)}, delay=${delay}`);
+      if (delay > 0) {
+        const t = setTimeout(() => {
+          console.log(`Disparando notificación para ${med.name}`);
+          // Always show toast, and system notification if permitted
+          if (Notification.permission === "granted") {
+            new Notification(`Hora de tomar: ${med.name}`, {
+              body: `Dosis: ${med.dosage}`,
+            });
+          }
+          toast({
+            title: `Hora de tomar: ${med.name}`,
+            description: `Dosis: ${med.dosage}`,
+          });
+        }, delay);
+        notificationTimeouts.current.push(t);
+      }
+    });
+
+    return () => {
+      notificationTimeouts.current.forEach(clearTimeout);
+      notificationTimeouts.current = [];
+    };
+  }, [meds, toast]);
+
+  // ─── Fetch medicamentos ───────────────────────────────────────────────
   const fetchMedications = async () => {
     if (!pid) return;
     setLoading(true);
     try {
       const res = await fetch(`/api/medications?patientProfileId=${pid}`);
       if (!res.ok) throw new Error("Failed to load");
-      const data: MedicationData[] = await res.json();
-      setMeds(data);
+      setMeds(await res.json());
     } catch (err) {
       console.error(err);
       toast({ title: "Error", description: "No se pudieron cargar los medicamentos", variant: "destructive" });
@@ -76,12 +118,12 @@ export default function MedicationsPage() {
 
   // ─── Create Dialog State ────────────────────────────────────────────
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", dosage: "", type: "", frequency: "daily" as "daily" | "weekly" | "custom" });
+  const [createForm, setCreateForm] = useState({ name: "", dosage: "", type: "", frequency: "daily" as "daily" | "weekly" | "custom", notes: "" });
   const [createStart, setCreateStart] = useState<Date>();
   const [createTime, setCreateTime] = useState<string>("");
 
   const resetCreate = () => {
-    setCreateForm({ name: "", dosage: "", type: "", frequency: "daily" });
+    setCreateForm({ name: "", dosage: "", type: "", frequency: "daily", notes: "" });
     setCreateStart(undefined);
     setCreateTime("");
   };
@@ -102,10 +144,7 @@ export default function MedicationsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ patientProfileId: pid, ...createForm, startDate: dt.toISOString() }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Error al guardar");
-      }
+      if (!res.ok) throw new Error("Error al guardar");
       await fetchMedications();
       resetCreate();
       setCreateOpen(false);
@@ -118,16 +157,16 @@ export default function MedicationsPage() {
   // ─── Edit Dialog State ──────────────────────────────────────────────
   const [editOpen, setEditOpen] = useState(false);
   const [medToEdit, setMedToEdit] = useState<MedicationData | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", dosage: "", type: "", frequency: "daily" as "daily" | "weekly" | "custom" });
+  const [editForm, setEditForm] = useState({ name: "", dosage: "", type: "", frequency: "daily" as "daily" | "weekly" | "custom", notes: "" });
   const [editStart, setEditStart] = useState<Date>();
   const [editTime, setEditTime] = useState<string>("");
 
   const openEdit = (med: MedicationData) => {
     setMedToEdit(med);
-    setEditForm({ name: med.name, dosage: med.dosage, type: med.type, frequency: med.frequency });
+    setEditForm({ name: med.name, dosage: med.dosage, type: med.type, frequency: med.frequency, notes: med.notes || "" });
     const dt = new Date(med.startDate);
     setEditStart(dt);
-    setEditTime(dt.toTimeString().slice(0,5));
+    setEditTime(dt.toTimeString().slice(0, 5));
     setEditOpen(true);
   };
 
@@ -144,10 +183,7 @@ export default function MedicationsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...editForm, startDate: dt.toISOString() }),
       });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || "Error al actualizar");
-      }
+      if (!res.ok) throw new Error("Error al actualizar");
       await fetchMedications();
       setEditOpen(false);
       toast({ title: "Medicamento actualizado" });
@@ -161,7 +197,7 @@ export default function MedicationsPage() {
     try {
       const res = await fetch(`/api/medications/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
-      setMeds(ms => ms.filter(m => m.id !== id));
+      setMeds((ms) => ms.filter((m) => m.id !== id));
       toast({ title: "Medicamento eliminado" });
     } catch {
       toast({ title: "Error", description: "No se pudo eliminar", variant: "destructive" });

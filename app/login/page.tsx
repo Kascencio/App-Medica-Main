@@ -17,29 +17,22 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Heart, Zap } from "lucide-react"
-import { PasswordValidator } from "@/components/password-validator"
-import { useToast } from "@/components/ui/use-toast";
-import { Eye, EyeOff, User, Lock, Activity, Shield, X} from "lucide-react";
+import { Heart, Zap, Eye, EyeOff, User, Lock, Activity, Shield, X } from "lucide-react";
+import { PasswordValidator } from "@/components/password-validator";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LoginPage() {
-  /* ---------------------------------------------------------- */
   const [showPassword, setShowPassword] = useState(false);
   const [loginData, setLoginData] = useState({ email: "", password: "" });
   const [registerData, setRegisterData] = useState({
-    email: "",
-    password: "",
-    confirmPassword: "",
-    role: "PATIENT" as Role,
-    inviteCode: "",
+    email: "", password: "", confirmPassword: "", role: "PATIENT" as Role, inviteCode: "",
   });
+  const [isPasswordValid, setIsPasswordValid] = useState(false);
 
-  const [isPasswordValid, setIsPasswordValid] = useState(false)
   const { login, register } = useAuth();
   const router = useRouter();
-  const { toast } = useToast();
+  const { toast } = useToast();  // <— hook correcto
 
-  /* ---------------------------- LOGIN ----------------------------- */
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -47,35 +40,33 @@ export default function LoginPage() {
       router.push("/dashboard");
     } catch (err: any) {
       toast({
-        title: "Error",
+        title:       "Login fallido",
         description: err.message ?? "Credenciales incorrectas",
-        variant: "destructive",
+        variant:     "destructive",
       });
     }
   };
 
-  /* --------------------------- REGISTER --------------------------- */
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     if (registerData.password !== registerData.confirmPassword) {
       toast({ title: "Las contraseñas no coinciden", variant: "destructive" });
       return;
     }
-
     try {
       await register(
         registerData.email,
         registerData.password,
         registerData.role,
-        registerData.role === "CAREGIVER" ? registerData.inviteCode : undefined,
+        registerData.role === "CAREGIVER" ? registerData.inviteCode : undefined
       );
       toast({ title: "Registro exitoso", description: "Sesión iniciada" });
       router.push("/dashboard");
     } catch (err: any) {
       toast({
-        title: "Error de registro",
+        title:       "Error de registro",
         description: err.message ?? "No se pudo completar el registro",
-        variant: "destructive",
+        variant:     "destructive",
       });
     }
   };

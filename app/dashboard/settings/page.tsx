@@ -49,6 +49,12 @@ type Permissions = {
   manageNotes: boolean;
 };
 
+interface NotifPrefs {
+  medication: boolean;
+  appointment: boolean;
+  caregiver: boolean;
+}
+
 export default function SettingsPage() {
   /* ------------------- Auth + helpers ------------------- */
   const { user, logout } = useAuth();
@@ -57,6 +63,11 @@ export default function SettingsPage() {
       ? (user as any)?.profileId
       : (user as any)?.patientId;
   const { toast } = useToast();
+  const [notif, setNotif] = useState<NotifPrefs>({
+    medication: true,
+    appointment: true,
+    caregiver: true,
+  });
 
   /* ------------------- UI state ------------------- */
   const [showPassword, setShowPassword] = useState(false);
@@ -88,12 +99,6 @@ export default function SettingsPage() {
   const [caregivers, setCaregivers] = useState<Caregiver[]>([]);
   const [caregiverLoading, setCaregiverLoading] = useState(false);
 
-  const [notif, setNotif] = useState({
-    medication: true,
-    appointment: true,
-    caregiver: true,
-  });
-
   // SettingsPage.tsx (encabezados de estado)
   const [lastInvite, setLastInvite] = useState<{
     code: string;
@@ -113,6 +118,83 @@ export default function SettingsPage() {
     return () => controller.abort();
   }, [pid, user?.role]);
 
+  useEffect(() => {
+    const saved = localStorage.getItem("notifPrefs");
+    if (saved) setNotif(JSON.parse(saved));
+  }, []);
+
+  // Helper para enviar subscripción al servidor
+  async function subscribePush() {
+    if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+      toast({ title: "Push no soportado", variant: "destructive" });
+      return;
+    }
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    const sub =
+      existing ||
+      (await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(
+          process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!
+        ),
+      }));
+    // Enviar al backend
+    await fetch("/api/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(sub),
+    });
+  }
+
+  // Helper para desuscribir
+  async function unsubscribePush() {
+    const reg = await navigator.serviceWorker.ready;
+    const existing = await reg.pushManager.getSubscription();
+    if (existing) {
+      await existing.unsubscribe();
+      // Informar al backend que borre esta suscripción
+      await fetch(
+        `/api/subscribe?endpoint=${encodeURIComponent(existing.endpoint)}`,
+        {
+          method: "DELETE",
+        }
+      );
+    }
+  }
+
+  // Cada vez que cambie notif.medication, suscribimos o desuscribimos
+  useEffect(() => {
+    localStorage.setItem("notifPrefs", JSON.stringify(notif));
+
+    if (notif.medication) {
+      subscribePush().catch((err) => {
+        console.error("Error subscribe:", err);
+        toast({
+          title: "Error al activar notificaciones",
+          variant: "destructive",
+        });
+      });
+    } else {
+      unsubscribePush().catch((err) => {
+        console.error("Error unsubscribe:", err);
+        toast({
+          title: "Error al desactivar notificaciones",
+          variant: "destructive",
+        });
+      });
+    }
+  }, [notif.medication]);
+
+  // Convierte la clave VAPID pública a Uint8Array
+  function urlBase64ToUint8Array(base64String: string) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding)
+      .replace(/-/g, "+")
+      .replace(/_/g, "/");
+    const rawData = window.atob(base64);
+    return new Uint8Array([...rawData].map((c) => c.charCodeAt(0)));
+  }
   useEffect(() => {
     const local = localStorage.getItem("notifPrefs");
     if (local) setNotif(JSON.parse(local));
@@ -319,7 +401,6 @@ export default function SettingsPage() {
               </CardFooter>
             </form>
           </Card>
-
         </TabsContent>
         {/* ------------------- CAREGIVERS ------------------- */}
         <TabsContent value="caregivers" className="space-y-4">
@@ -369,40 +450,40 @@ export default function SettingsPage() {
                   >
                     <Plus className="mr-2 h-4 w-4" /> Generar código
                   </Button>
-                                      {lastInvite && (
-                      <div className="rounded-md border p-3 bg-muted/20 mt-2 space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-medium">Código:</span>
-                          <span className="font-mono tracking-widest text-lg">
-                            {lastInvite.code}
-                          </span>
+                  {lastInvite && (
+                    <div className="rounded-md border p-3 bg-muted/20 mt-2 space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Código:</span>
+                        <span className="font-mono tracking-widest text-lg">
+                          {lastInvite.code}
+                        </span>
 
-                          {/* Botón copiar */}
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={() => {
-                              navigator.clipboard.writeText(lastInvite.code);
-                              toast({
-                                title: "Copiado",
-                                description: "Código en portapapeles",
-                              });
-                            }}
-                          >
-                            <Copy className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-
-                        <p className="text-xs text-muted-foreground">
-                          Caduca:{" "}
-                          {format(
-                            new Date(lastInvite.expiresAt),
-                            "d 'de' MMMM yyyy · HH:mm"
-                          )}
-                        </p>
+                        {/* Botón copiar */}
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          className="h-7 w-7"
+                          onClick={() => {
+                            navigator.clipboard.writeText(lastInvite.code);
+                            toast({
+                              title: "Copiado",
+                              description: "Código en portapapeles",
+                            });
+                          }}
+                        >
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
                       </div>
-                    )}
+
+                      <p className="text-xs text-muted-foreground">
+                        Caduca:{" "}
+                        {format(
+                          new Date(lastInvite.expiresAt),
+                          "d 'de' MMMM yyyy · HH:mm"
+                        )}
+                      </p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -489,6 +570,15 @@ export default function SettingsPage() {
                 <Switch
                   checked={notif.caregiver}
                   onCheckedChange={(v) => saveNotif("caregiver", v)}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <span>Notificaciones</span>
+                <Switch
+                  checked={notif.medication}
+                  onCheckedChange={(v) =>
+                    setNotif((n) => ({ ...n, medication: v }))
+                  }
                 />
               </div>
             </CardContent>

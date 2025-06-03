@@ -1,9 +1,19 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-provider";
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, getDay, addDays, isSameDay, isToday } from "date-fns";
+import {
+  format,
+  parseISO,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  getDay,
+  addDays,
+  isSameDay,
+  isToday,
+} from "date-fns";
 import { es } from "date-fns/locale";
 import {
   Card,
@@ -31,7 +41,20 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/components/ui/use-toast";
 import { cn } from "@/lib/utils";
 
-import { User, ClipboardList, Pill, Stethoscope, CalendarIcon, Plus, Edit3, Trash2, Clock, MapPin, FileText, Calendar as CalendarIconLarge } from "lucide-react";
+import {
+  User,
+  ClipboardList,
+  Pill,
+  Stethoscope,
+  CalendarIcon,
+  Plus,
+  Edit3,
+  Trash2,
+  Clock,
+  MapPin,
+  FileText,
+  Calendar as CalendarIconLarge,
+} from "lucide-react";
 
 /* ───────────────────────────────────────────────────────────────────────── */
 /*                               Tipos de datos                              */
@@ -93,8 +116,8 @@ interface Note {
 }
 
 /* Para el calendario */
-type CalMed = { id: number; name: string; time: string; dose: string; type: string; };
-type CalAppt = { id: number; title: string; time: string; location?: string; status: string; };
+type CalMed = { id: number; name: string; time: string; dose: string; type: string };
+type CalAppt = { id: number; title: string; time: string; location?: string; status: string };
 type DayBucket = { medications: CalMed[]; appointments: CalAppt[] };
 
 /* ───────────────────────────────────────────────────────────────────────── */
@@ -119,7 +142,7 @@ export default function CaregiverDashboardPage() {
     if (authLoading) return;
     if (!user || user.role !== "CAREGIVER") return;
 
-    fetch("/api/caregivers/patients")
+    fetch("/api/caregivers/patients", { credentials: "include" })
       .then(async (res) => {
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
@@ -149,6 +172,7 @@ export default function CaregiverDashboardPage() {
       const res = await fetch("/api/caregivers/join", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ inviteCode: joinCode.trim() }),
       });
       if (!res.ok) {
@@ -156,7 +180,7 @@ export default function CaregiverDashboardPage() {
         throw new Error(data.error || "Código inválido");
       }
       // Refrescar lista
-      const updatedList = await fetch("/api/caregivers/patients").then((r) => r.json());
+      const updatedList = await fetch("/api/caregivers/patients", { credentials: "include" }).then((r) => r.json());
       setPatients(updatedList);
       // Seleccionar el último agregado
       if (Array.isArray(updatedList) && updatedList.length > 0) {
@@ -195,27 +219,27 @@ export default function CaregiverDashboardPage() {
     async function fetchAllForPatient() {
       try {
         // 2.1) Perfil paciente
-        const patientRes = await fetch(`/api/patients/${selectedPatientId}`);
+        const patientRes = await fetch(`/api/patients/${selectedPatientId}`, { credentials: "include" });
         if (!patientRes.ok) throw new Error("Error cargando paciente");
         setPatient(await patientRes.json());
 
         // 2.2) Medicamentos
-        const medsRes = await fetch(`/api/medications?patientProfileId=${selectedPatientId}`);
+        const medsRes = await fetch(`/api/medications?patientProfileId=${selectedPatientId}`, { credentials: "include" });
         if (!medsRes.ok) throw new Error("Error cargando medicamentos");
         setMedications(await medsRes.json());
 
         // 2.3) Tratamientos
-        const treatRes = await fetch(`/api/treatments?patientProfileId=${selectedPatientId}`);
+        const treatRes = await fetch(`/api/treatments?patientProfileId=${selectedPatientId}`, { credentials: "include" });
         if (!treatRes.ok) throw new Error("Error cargando tratamientos");
         setTreatments(await treatRes.json());
 
         // 2.4) Citas
-        const apptRes = await fetch(`/api/appointments?patientProfileId=${selectedPatientId}`);
+        const apptRes = await fetch(`/api/appointments?patientProfileId=${selectedPatientId}`, { credentials: "include" });
         if (!apptRes.ok) throw new Error("Error cargando citas");
         setAppointments(await apptRes.json());
 
         // 2.5) Notas
-        const notesRes = await fetch(`/api/notes?patientProfileId=${selectedPatientId}`);
+        const notesRes = await fetch(`/api/notes?patientProfileId=${selectedPatientId}`, { credentials: "include" });
         if (!notesRes.ok) throw new Error("Error cargando notas");
         setNotes(await notesRes.json());
       } catch (e: any) {
@@ -328,7 +352,7 @@ export default function CaregiverDashboardPage() {
     if (!pidForAPI) return;
     setMedLoading(true);
     try {
-      const res = await fetch(`/api/medications?patientProfileId=${pidForAPI}`);
+      const res = await fetch(`/api/medications?patientProfileId=${pidForAPI}`, { credentials: "include" });
       if (!res.ok) throw new Error("Failed to load");
       setMedications(await res.json());
     } catch (err) {
@@ -364,6 +388,7 @@ export default function CaregiverDashboardPage() {
       const res = await fetch("/api/medications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ patientProfileId: pidForAPI, ...createMedForm, startDate: dt.toISOString() }),
       });
       if (!res.ok) throw new Error("Error al guardar");
@@ -402,6 +427,7 @@ export default function CaregiverDashboardPage() {
       const res = await fetch(`/api/medications/${medToEdit.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ ...editMedForm, startDate: dt.toISOString() }),
       });
       if (!res.ok) throw new Error("Error al actualizar");
@@ -416,7 +442,7 @@ export default function CaregiverDashboardPage() {
   // Eliminar medicamento
   const deleteMed = async (id: number) => {
     try {
-      const res = await fetch(`/api/medications/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/medications/${id}`, { method: "DELETE", credentials: "include" });
       if (!res.ok) throw new Error();
       setMedications((ms) => ms.filter((m) => m.id !== id));
       toast({ title: "Medicamento eliminado" });
@@ -446,7 +472,7 @@ export default function CaregiverDashboardPage() {
     if (!pidForAPI) return;
     setTreatLoading(true);
     try {
-      const res = await fetch(`/api/treatments?patientProfileId=${pidForAPI}`);
+      const res = await fetch(`/api/treatments?patientProfileId=${pidForAPI}`, { credentials: "include" });
       if (!res.ok) throw new Error();
       setTreatments(await res.json());
     } catch (err) {
@@ -487,6 +513,7 @@ export default function CaregiverDashboardPage() {
       const res = await fetch("/api/treatments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -531,6 +558,7 @@ export default function CaregiverDashboardPage() {
       const res = await fetch(`/api/treatments/${treatToEdit.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(body),
       });
       if (!res.ok) {
@@ -549,7 +577,7 @@ export default function CaregiverDashboardPage() {
   // Eliminar tratamiento
   const deleteTreat = async (id: number) => {
     try {
-      const res = await fetch(`/api/treatments/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/treatments/${id}`, { method: "DELETE", credentials: "include" });
       if (!res.ok) throw new Error();
       setTreatments((l) => l.filter((t) => t.id !== id));
       toast({ title: "Tratamiento eliminado" });
@@ -581,7 +609,7 @@ export default function CaregiverDashboardPage() {
     if (!pidForAPI) return;
     setApptLoading(true);
     try {
-      const res = await fetch(`/api/appointments?patientProfileId=${pidForAPI}`);
+      const res = await fetch(`/api/appointments?patientProfileId=${pidForAPI}`, { credentials: "include" });
       if (!res.ok) throw new Error();
       setAppointments(await res.json());
     } catch (err) {
@@ -616,6 +644,7 @@ export default function CaregiverDashboardPage() {
       const res = await fetch("/api/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           patientProfileId: pidForAPI,
           title: createApptForm.doctorName,
@@ -662,6 +691,7 @@ export default function CaregiverDashboardPage() {
       const res = await fetch(`/api/appointments/${apptToEdit.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           title: createApptForm.doctorName,
           description: `Especialidad: ${createApptForm.specialty}\n${createApptForm.notes}`.trim(),
@@ -684,7 +714,7 @@ export default function CaregiverDashboardPage() {
   // Eliminar cita
   const deleteAppointment = async (id: number) => {
     try {
-      const res = await fetch(`/api/appointments/${id}`, { method: "DELETE" });
+      const res = await fetch(`/api/appointments/${id}`, { method: "DELETE", credentials: "include" });
       if (!res.ok) throw new Error();
       setAppointments((a) => a.filter((x) => x.id !== id));
       toast({ title: "Cita eliminada" });
@@ -703,7 +733,7 @@ export default function CaregiverDashboardPage() {
     if (!pidForAPI) return;
     setNotesLoading(true);
     try {
-      const res = await fetch(`/api/notes?patientProfileId=${pidForAPI}`);
+      const res = await fetch(`/api/notes?patientProfileId=${pidForAPI}`, { credentials: "include" });
       if (!res.ok) throw new Error();
       setNotes(await res.json());
     } catch (err) {
@@ -1821,4 +1851,3 @@ function Item({ label, value }: { label: string; value: string | number | null |
     </div>
   );
 }
-

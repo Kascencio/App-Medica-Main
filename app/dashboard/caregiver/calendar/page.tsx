@@ -1,6 +1,7 @@
+// app/(dashboard)/caregiver/calendar/page.tsx
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   format,
   parseISO,
@@ -22,25 +23,22 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { CalendarIcon, Pill, Stethoscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-/* ---------- Tipos de API ---------- */
 interface ApiMedication {
   id: number;
-  caregiverProfileId: number; // Cambiado de patientProfileId a caregiverProfileId
+  caregiverId: number;
   name: string;
   dosage: string;
   type: string;
-  frequency: "daily" | "weekly" | "custom";
   startDate: string; // ISO
   notes?: string | null;
 }
 
 interface ApiAppointment {
   id: number;
-  caregiverProfileId: number; // Cambiado de patientProfileId a caregiverProfileId
+  caregiverId: number;
   title: string;
   dateTime: string; // ISO
   location?: string | null;
-  description?: string | null;
   status: "SCHEDULED" | "COMPLETED" | "CANCELLED";
 }
 
@@ -63,18 +61,19 @@ type DayBucket = {
 
 export default function CaregiverCalendarPage() {
   const { user, loading: authLoading } = useAuth();
-  const caregiverId = user?.profileId; // Cambiado de patientId a profileId
+  const caregiverId = user?.profileId; // el cuidador usa su propio profileId
+
   const canViewMedications = Boolean(user?.permissions?.viewMedications);
   const canViewAppointments = Boolean(user?.permissions?.viewAppointments);
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [meds, setMeds] = useState<ApiMedication[]>([]);
   const [appts, setAppts] = useState<ApiAppointment[]>([]);
-  const [error, setError] = useState<string | null>(null);
+
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDay, setSelectedDay] = useState<Date | null>(new Date());
 
-  /* ---------- Fetch data ---------- */
   const fetchData = useCallback(async () => {
     if (!caregiverId) {
       setLoading(false);
@@ -84,13 +83,13 @@ export default function CaregiverCalendarPage() {
     try {
       const [medData, apptData] = await Promise.all([
         canViewMedications
-          ? fetch(`/api/medications?patientProfileId=${caregiverId}`).then((r) =>
-              r.json()
+          ? fetch(`/api/medications?caregiverId=${caregiverId}`).then((r) =>
+              r.ok ? r.json() : []
             )
           : Promise.resolve([]),
         canViewAppointments
-          ? fetch(`/api/appointments?patientProfileId=${caregiverId}`).then((r) =>
-              r.json()
+          ? fetch(`/api/appointments?caregiverId=${caregiverId}`).then((r) =>
+              r.ok ? r.json() : []
             )
           : Promise.resolve([]),
       ]);
@@ -111,7 +110,7 @@ export default function CaregiverCalendarPage() {
     }
   }, [authLoading, fetchData]);
 
-  /* ---------- Build date-keyed buckets ---------- */
+  // Construir "buckets" por fecha
   const buckets = useMemo<Record<string, DayBucket>>(() => {
     const b: Record<string, DayBucket> = {};
     const key = (d: Date) => format(d, "yyyy-MM-dd");
@@ -120,6 +119,7 @@ export default function CaregiverCalendarPage() {
       if (!b[k]) b[k] = { medications: [], appointments: [] };
       return b[k];
     };
+
     if (canViewMedications) {
       meds.forEach((m) => {
         const d = parseISO(m.startDate);
@@ -132,6 +132,7 @@ export default function CaregiverCalendarPage() {
         });
       });
     }
+
     if (canViewAppointments) {
       appts.forEach((a) => {
         const d = parseISO(a.dateTime);
@@ -144,15 +145,17 @@ export default function CaregiverCalendarPage() {
         });
       });
     }
+
     return b;
   }, [meds, appts, canViewMedications, canViewAppointments]);
 
-  /* ---------- Compute calendar days ---------- */
+  // Generar lista de días a mostrar en el mes
   const calendarDays = useMemo(() => {
     const start = startOfMonth(currentMonth);
     const end = endOfMonth(currentMonth);
     let days = eachDayOfInterval({ start, end });
-    const padStart = getDay(start); // 0=Sun…6=Sat
+
+    const padStart = getDay(start);
     if (padStart > 0) {
       days = [
         ...Array.from({ length: padStart }, (_, i) => addDays(start, i - padStart)),
@@ -166,18 +169,20 @@ export default function CaregiverCalendarPage() {
     return days;
   }, [currentMonth]);
 
-  /* ---------- Handlers ---------- */
   const prevMonth = () =>
-    setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+    setCurrentMonth(
+      (m) => new Date(m.getFullYear(), m.getMonth() - 1, 1)
+    );
   const nextMonth = () =>
-    setCurrentMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+    setCurrentMonth(
+      (m) => new Date(m.getFullYear(), m.getMonth() + 1, 1)
+    );
   const goToday = () => {
     const t = new Date();
     setCurrentMonth(t);
     setSelectedDay(t);
   };
 
-  /* ---------- Loading / errors / permissions ---------- */
   if (authLoading || loading) {
     return (
       <div className="flex h-full items-center justify-center p-8">
@@ -194,7 +199,7 @@ export default function CaregiverCalendarPage() {
             <CardTitle>Error</CardTitle>
           </CardHeader>
           <CardContent>
-            Este cuidador no tiene aún un perfil asignado.
+            Este cuidador aún no tiene un perfil asignado.
           </CardContent>
         </Card>
       </div>
@@ -209,7 +214,7 @@ export default function CaregiverCalendarPage() {
             <CardTitle>Acceso Denegado</CardTitle>
           </CardHeader>
           <CardContent>
-            No tiene permisos para ver ni medicamentos ni citas como cuidador.
+            No tienes permisos para ver ni medicamentos ni citas como cuidador.
           </CardContent>
         </Card>
       </div>
@@ -224,7 +229,6 @@ export default function CaregiverCalendarPage() {
     );
   }
 
-  /* ---------- Render ---------- */
   return (
     <div className="space-y-6 p-4">
       <h1 className="text-2xl font-bold">Calendario del Cuidador</h1>
@@ -257,6 +261,7 @@ export default function CaregiverCalendarPage() {
               const key = format(day, "yyyy-MM-dd");
               const bucket = buckets[key];
               const inMonth = day.getMonth() === currentMonth.getMonth();
+
               return (
                 <div
                   key={key}

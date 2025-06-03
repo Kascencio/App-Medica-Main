@@ -73,32 +73,6 @@ export function Sidebar() {
             icon: <Home className="h-5 w-5" />,
           },
           {
-            title: "Calendario",
-            href: "/dashboard/caregiver/calendar",
-            icon: <Calendar className="h-5 w-5" />,
-            show:
-              user?.permissions?.viewMedications ||
-              user?.permissions?.viewAppointments,
-          },
-          {
-            title: "Medicamentos",
-            href: "/dashboard/caregiver/medications",
-            icon: <Pill className="h-5 w-5" />,
-            show: user?.permissions?.viewMedications,
-          },
-          {
-            title: "Citas",
-            href: "/dashboard/caregiver/appointments",
-            icon: <Calendar className="h-5 w-5" />,
-            show: user?.permissions?.viewAppointments,
-          },
-          {
-            title: "Tratamientos",
-            href: "/dashboard/caregiver/treatments",
-            icon: <ClipboardList className="h-5 w-5" />,
-            show: user?.permissions?.viewTreatments,
-          },
-          {
             title: "Configuración",
             href: "/dashboard/settings",
             icon: <Settings className="h-5 w-5" />,

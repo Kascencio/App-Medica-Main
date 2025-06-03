@@ -27,6 +27,12 @@ enum AppointmentStatus {
   CANCELLED
 }
 
+enum PermissionStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+}
+
 /**
  * ---------- MODELS ----------
  */
@@ -75,6 +81,8 @@ model Permission {
   caregiver        User            @relation("CaregiverPermissions", fields: [caregiverId], references: [id])
   caregiverId      Int
   level            PermissionLevel @default(READ)
+  status           PermissionStatus  @default(PENDING)  
+
 
   grantedAt DateTime @default(now())
   updatedAt DateTime @updatedAt

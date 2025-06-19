@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">RecuerdaMed</string>
+    <string name="title_activity_main">RecuerdaMed</string>
+    <string name="package_name">com.mimedica.RecuerdaMed</string>
+    <string name="custom_url_scheme">com.mimedica.RecuerdaMed</string>
+</resources>

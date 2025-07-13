@@ -132,7 +132,7 @@ export function Sidebar() {
             <div className="mr-2 relative">
               <div className="flex items-center justify-center h-6 rounded-full shadow-lg">
                 <img
-                  src="/img/logo-cur.webp"
+                  src="/img/logo.webp"
                   alt="Logo-curabyte"
                   className="flex w-9 h-9 rounded-lg"
                 />
@@ -157,9 +157,9 @@ export function Sidebar() {
            <div className="mr-2 relative">
               <div className="flex items-center justify-center h-6 rounded-full shadow-lg">
                 <img
-                  src="/img/logo-cur.webp"
+                  src="/img/logo.webp"
                   alt="Logo-curabyte"
-                  className="flex w-9 h-9 rounded-lg"
+                  className="flex w-9 h-11 rounded-lg"
                 />
               </div>
             </div>

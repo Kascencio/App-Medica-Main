@@ -23,6 +23,10 @@ interface PatientProfile {
   userId: number;
   name?: string;
   age?: number;
+  weight?: number;
+  height?: number;
+  allergies?: string; 
+  reactions?: string;
   dateOfBirth?: string;
   gender?: Gender;
   doctorName?: string;
@@ -45,6 +49,10 @@ export default function ProfilePage() {
         userId: user.id,
         name: "",
         age: undefined,
+        weight: undefined,
+        height: undefined,
+        allergies: "",
+        reactions: "",
         dateOfBirth: "",
         gender: "male",
         doctorName: "",
@@ -71,6 +79,10 @@ export default function ProfilePage() {
             userId: user.id,
             name: data.name,
             age: data.age,
+            weight: data.weight,
+            height: data.height,
+            allergies: data.allergies || "",
+            reactions: data.reactions || "",
             dateOfBirth: data.dateOfBirth ? data.dateOfBirth.split("T")[0] : "",
             gender: (data.gender as Gender) ?? "male",
             doctorName: data.doctorName,
@@ -83,6 +95,10 @@ export default function ProfilePage() {
               userId: user.id,
               name: "",
               age: undefined,
+              weight: undefined,
+              height: undefined,
+              allergies: "",
+              reactions: "",
               dateOfBirth: "",
               gender: "male",
               doctorName: "",
@@ -181,6 +197,7 @@ export default function ProfilePage() {
                   value={form.name || ""}
                   onChange={handleChange}
                   required
+                  placeholder="Nombre completo"
                 />
               </div>
 
@@ -194,6 +211,57 @@ export default function ProfilePage() {
                   max={120}
                   value={form.age ?? ""}
                   onChange={handleChange}
+                  placeholder="Años"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="weight">Peso</Label>
+                <Input
+                  id="weight"
+                  name="weight"
+                  type="number"
+                  min={0}
+                  max={350}
+                  value={form.weight ?? ""}
+                  onChange={handleChange}
+                  placeholder="kg"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="height">Altura</Label>
+                <Input
+                  id="height"
+                  name="height"
+                  type="number"
+                  min={0}
+                  max={350}
+                  value={form.height ?? ""}
+                  onChange={handleChange}
+                  placeholder="cm"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="allergies">Alergias</Label>
+                <Input
+                  id="allergies"
+                  name="allergies"
+                  value={form.allergies || ""}
+                  onChange={handleChange}
+                  placeholder="Especifica alergias"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="reactions">Reacciones</Label>
+                <Input
+                  id="reactions"
+                  name="reactions"
+                  value={form.reactions || ""}
+                  onChange={handleChange}
+                  placeholder="Reacciones a medicamentos u otros"
                 />
               </div>
 
@@ -205,6 +273,7 @@ export default function ProfilePage() {
                   type="date"
                   value={form.dateOfBirth || ""}
                   onChange={handleChange}
+                  placeholder="Fecha de nacimiento"
                 />
               </div>
 
@@ -230,6 +299,7 @@ export default function ProfilePage() {
                   name="doctorName"
                   value={form.doctorName || ""}
                   onChange={handleChange}
+                  placeholder="Nombre del doctor"
                 />
               </div>
 
@@ -240,6 +310,7 @@ export default function ProfilePage() {
                   name="doctorContact"
                   value={form.doctorContact || ""}
                   onChange={handleChange}
+                  placeholder="Teléfono o email del doctor"
                 />
               </div>
             </CardContent>
@@ -260,6 +331,18 @@ export default function ProfilePage() {
           <CardContent className="space-y-2">
             <p>
               <strong>Edad:</strong> {profile.age ?? "—"}
+            </p>
+            <p>
+              <strong>Peso:</strong> {profile.weight ?? "—"} kg
+            </p>
+            <p>
+              <strong>Altura:</strong> {profile.height ?? "—"} cm
+            </p>
+            <p>
+              <strong>Alergias:</strong> {profile.allergies || "—"}
+            </p>
+            <p>
+              <strong>Reacciones:</strong> {profile.reactions || "—"}
             </p>
             <p>
               <strong>Fecha de nacimiento:</strong>{" "}

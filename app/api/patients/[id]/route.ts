@@ -7,10 +7,13 @@ const idSchema    = z.coerce.number().int().positive();   // “1” → 1
 const updateSchema = z.object({
   name:              z.string().min(1).optional(),
   age:               z.coerce.number().int().nonnegative().optional(),
+  weight:            z.coerce.number().int().nonnegative().optional(),
+  height:            z.coerce.number().int().nonnegative().optional(),
+  allergies:         z.string().optional(),
+  reactions:         z.string().optional(),
   gender:            z.enum(["male", "female", "other"]).optional(),
   bloodType:         z.string().optional(),
   conditions:        z.string().optional(),
-  allergies:         z.string().optional(),
   contraindications: z.string().optional(),
   photoUrl:          z.string().url().optional(),
 });

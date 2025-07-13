@@ -58,6 +58,10 @@ model PatientProfile {
   user          User      @relation(fields: [userId], references: [id])
   userId        Int       @unique
   age           Int?
+  weight        Int?
+  height        Int?
+  allergies     String?
+  reactions     String?
   dateOfBirth   DateTime?
   gender        String?
   doctorName    String?

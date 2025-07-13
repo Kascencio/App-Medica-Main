@@ -40,7 +40,7 @@ interface MedicationData {
   patientProfileId: number;
   name: string;
   dosage: string;
-  type: string;
+  type:  "Oral" | "Inyectable" | "Tópico";
   frequency: "daily" | "weekly" | "custom";
   startDate: string;
   notes?: string;
@@ -127,12 +127,12 @@ useEffect(() => {
 
   // ─── Create Dialog State ────────────────────────────────────────────
   const [createOpen, setCreateOpen] = useState(false);
-  const [createForm, setCreateForm] = useState({ name: "", dosage: "", type: "", frequency: "daily" as "daily" | "weekly" | "custom", notes: "" });
+  const [createForm, setCreateForm] = useState({ name: "", dosage: "" , type: "Oral" as "Oral" | "Inyectable" | "Topico", frequency: "Diario" as "Diario" | "Semanal" | "custom", notes: "" });
   const [createStart, setCreateStart] = useState<Date>();
   const [createTime, setCreateTime] = useState<string>("");
 
   const resetCreate = () => {
-    setCreateForm({ name: "", dosage: "", type: "", frequency: "daily", notes: "" });
+    setCreateForm({ name: "", dosage: "", type: "Oral", frequency: "Diario", notes: "" });
     setCreateStart(undefined);
     setCreateTime("");
   };
@@ -166,13 +166,13 @@ useEffect(() => {
   // ─── Edit Dialog State ──────────────────────────────────────────────
   const [editOpen, setEditOpen] = useState(false);
   const [medToEdit, setMedToEdit] = useState<MedicationData | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", dosage: "", type: "", frequency: "daily" as "daily" | "weekly" | "custom", notes: "" });
+  const [editForm, setEditForm] = useState({ name: "", dosage: "", type: "Oral" as "Oral" | "Inyectable" | "Topico", frequency: "Diario" as "Diario" | "Semanal" | "custom", notes: "" });
   const [editStart, setEditStart] = useState<Date>();
   const [editTime, setEditTime] = useState<string>("");
 
   const openEdit = (med: MedicationData) => {
     setMedToEdit(med);
-    setEditForm({ name: med.name, dosage: med.dosage, type: med.type, frequency: med.frequency, notes: med.notes || "" });
+    setEditForm({ name: med.name, dosage: med.dosage, type: med.type === "Tópico" ? "Topico" : med.type, frequency: med.frequency === "daily" ? "Diario" : med.frequency === "weekly" ? "Semanal" : med.frequency, notes: med.notes || "" });
     const dt = new Date(med.startDate);
     setEditStart(dt);
     setEditTime(dt.toTimeString().slice(0, 5));
@@ -257,13 +257,21 @@ useEffect(() => {
                 </div>
                 <div>
                   <Label>Tipo</Label>
-                  <Input
+                  <Select
                     value={createForm.type}
-                    onChange={(e) =>
-                      setCreateForm((f) => ({ ...f, type: e.target.value }))
+                    onValueChange={(v) =>
+                      setCreateForm((f) => ({ ...f, type: v as any }))
                     }
                     required
-                  />
+                  > <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Oral">Oral</SelectItem>
+                      <SelectItem value="Inyectable">Inyectable</SelectItem>
+                      <SelectItem value="Topico">Topico</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <Label>Frecuencia</Label>
@@ -369,13 +377,22 @@ useEffect(() => {
               </div>
               <div>
                 <Label>Tipo</Label>
-                <Input
+                <Select
                   value={editForm.type}
-                  onChange={(e) =>
-                    setEditForm((f) => ({ ...f, type: e.target.value }))
+                  onValueChange={(e) =>
+                    setEditForm((f) => ({ ...f, type: e as any }))
                   }
                   required
-                />
+                >
+                   <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Oral">Oral</SelectItem>
+                      <SelectItem value="Inyectable">Inyectable</SelectItem>
+                      <SelectItem value="Topico">Topico</SelectItem>
+                    </SelectContent>
+                  </Select>
               </div>
               <div>
                 <Label>Frecuencia</Label>
@@ -479,8 +496,12 @@ useEffect(() => {
               <div className="flex justify-between">
                 <span className="text-sm">Dosis:</span>
                 <span className="text-sm">{med.dosage}</span>
+                <span className="text-sm">Tipo: {med.type}</span>
                 <span className="text-sm">Hora:</span>
-                <span className="text-sm">{format(new Date(med.startDate), "HH:mm")}</span>
+                <span className="text-sm">{format(new Date(med.startDate),"HH:mm")}</span>
+              </div>
+              <div>
+                  <span className="text-sm">Frecuencia: {med.frequency}</span>
               </div>
               <div className="flex items-center text-sm text-muted-foreground pt-2">
                 <span>

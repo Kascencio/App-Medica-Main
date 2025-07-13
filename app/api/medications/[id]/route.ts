@@ -10,7 +10,7 @@ const idSchema = z.coerce.number().int().positive();
 const updateSchema = z.object({
   name:      z.string().min(1).optional(),
   dosage:    z.string().min(1).optional(),
-  type:      z.string().min(1).optional(),
+  type:      z.enum(["Oral", "Inyectable", "Tópico"]).optional(),
   frequency: z.enum(["daily", "weekly", "custom"]).optional(),
   startDate: z.string().datetime().optional(),
   endDate:   z.string().datetime().optional(),

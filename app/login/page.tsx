@@ -85,15 +85,15 @@ export default function LoginPage() {
         <div className="text-center mb-8 animate-fade-in">
           <div className="flex justify-center mb-4">
             <div className="flex items-center justify-center w-24 h-24 bg-gradient-medical rounded-full shadow-sm">
-            <img src="/img/logo-cur.webp" alt="Logo-curabyte" className="rounded-full w-full" />
+            <img src="/img/logo.webp" alt="Logo-curabyte" className="rounded-full w-full" />
             </div>
           </div>
           <h1 className="text-3xl font-bold bg-gradient-medical bg-clip-text text-transparent">RecuerdaMed</h1>
-          <p className="text-slate-600 mt-2">Tu salud, inteligentemente gestionada</p>
+          <p className="text-slate-600 mt-2">Para los que cuidan... Y se cuidan.</p>
         </div>
       <Card className="mx-auto w-full max-w-md">
           <CardHeader className="space-y-1 text-center pb-4">
-            <CardTitle className="text-2xl font-bold text-slate-800">Bienvenido a RecuerdaMed</CardTitle>
+            <CardTitle className="text-2xl font-bold text-slate-800">Bienvenido</CardTitle>
             <CardDescription className="text-slate-600">Accede a tu agenda médica inteligente</CardDescription>
           </CardHeader>
 

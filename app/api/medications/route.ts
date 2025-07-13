@@ -7,7 +7,7 @@ const createSchema = z.object({
   patientProfileId: z.number().int().positive(),
   name:      z.string().min(1),
   dosage:    z.string().min(1),
-  type:      z.string().min(1),
+  type:      z.enum(["Oral", "Inyectable", "Tópico"]),
   frequency: z.enum(["daily", "weekly", "custom"]),
   startDate: z.string().datetime(),        // ISO -> Date
   notes:     z.string().optional(),

@@ -6,6 +6,7 @@ import { z } from "zod";
 // Schema de validación para creación/actualización
 const upsertSchema = z.object({
   userId: z.number().int().positive(),
+  photoUrl: z.string().url().optional(),
   name: z.string().min(1).optional(),
   age: z.number().int().nonnegative().optional(),
   weight: z.coerce.number().int().nonnegative().optional(),
@@ -51,6 +52,7 @@ export async function POST(req: NextRequest) {
       where: { userId: data.userId },
       create: {
         userId: data.userId,
+        photoUrl: data.photoUrl,
         name: data.name,
         age: data.age,
         weight: data.weight,
@@ -63,6 +65,7 @@ export async function POST(req: NextRequest) {
         doctorContact: data.doctorContact,
       },
       update: {
+        photoUrl: data.photoUrl,
         name: data.name,
         age: data.age,
         weight: data.weight,

@@ -54,6 +54,7 @@ model User {
 
 model PatientProfile {
   id            Int       @id @default(autoincrement())
+  photoUrl      String?  
   name          String?
   user          User      @relation(fields: [userId], references: [id])
   userId        Int       @unique

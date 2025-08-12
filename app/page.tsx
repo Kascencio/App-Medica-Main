@@ -28,7 +28,7 @@ export default function Home() {
     <main className="flex min-h-screen items-center justify-center">
       <div className="animate-pulse text-center">
         <h1 className="text-2xl font-bold">RecuerdaMed</h1>
-        <p className="text-muted-foreground">Cargando...</p>
+        <p className="text-muted-foreground">Cargando..</p>
       </div>
     </main>
   )

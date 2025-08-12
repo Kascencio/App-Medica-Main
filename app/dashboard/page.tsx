@@ -121,7 +121,7 @@ export default function DashboardPage() {
           <div className="medical-icon mx-auto mb-4 animate-pulse">
             <TrendingUp className="h-6 w-6" />
           </div>
-          <p className="text-slate-600">Cargando panel...</p>
+          <p className="text-slate-600">Cargando panel..</p>
         </div>
       </div>
     )

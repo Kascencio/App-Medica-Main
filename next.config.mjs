@@ -6,6 +6,11 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  async rewrites() {
+    return [
+      { source: '/api/:path*', destination: '/api/proxy/:path*' },
+    ];
+  },
   images: {
     unoptimized: true,
   },

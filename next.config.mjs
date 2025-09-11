@@ -8,7 +8,7 @@ const nextConfig = {
   },
   async rewrites() {
     return [
-      { source: '/api/:path*', destination: '/api/proxy/:path*' },
+      { source: '/api/:path*', destination: 'http://72.60.30.129:3001/api/:path*' },
     ];
   },
   images: {

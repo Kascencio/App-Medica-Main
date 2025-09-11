@@ -81,6 +81,18 @@ async function handleRequest(
         body = await request.text();
         console.log(`[PROXY] Body length: ${body.length} chars`);
         
+        // 🔍 DEBUG: Agregar logs para el body
+        console.log(`[PROXY] Body content:`, body);
+        
+        // Parsear el body para verificar el patientProfileId
+        try {
+          const bodyData = JSON.parse(body);
+          console.log(`[PROXY] patientProfileId type:`, typeof bodyData.patientProfileId);
+          console.log(`[PROXY] patientProfileId value:`, bodyData.patientProfileId);
+        } catch (parseError) {
+          console.log(`[PROXY] Error parsing body for debug:`, parseError);
+        }
+        
         // Para métodos PATCH y PUT, permitir body vacío
         if ((method === 'PATCH' || method === 'PUT') && body.length === 0) {
           console.log(`[PROXY] ${method} con body vacío - permitido`);
@@ -102,6 +114,11 @@ async function handleRequest(
 
     console.log(`[PROXY] Final URL: ${finalUrl}`);
     console.log(`[PROXY] Headers:`, Object.keys(headers));
+
+    // 🔍 DEBUG: Agregar log para el body que se envía
+    if (body) {
+      console.log(`[PROXY] Sending body:`, body);
+    }
 
     // Hacer la petición al backend con timeout
     const controller = new AbortController();

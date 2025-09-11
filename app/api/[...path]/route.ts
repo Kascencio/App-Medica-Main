@@ -43,7 +43,12 @@ async function handleRequest(
 ) {
   try {
     const apiPath = pathSegments.join('/');
-    const targetUrl = `${BACKEND_CONFIG.BASE_URL}/api/${apiPath}`;
+    
+    // ✅ SOLUCIÓN: Detección automática del prefijo para evitar duplicación
+    const baseUrl = BACKEND_CONFIG.BASE_URL.endsWith('/api') 
+      ? BACKEND_CONFIG.BASE_URL 
+      : `${BACKEND_CONFIG.BASE_URL}/api`;
+    const targetUrl = `${baseUrl}/${apiPath}`;
     
     console.log(`[PROXY] ${method} ${apiPath} -> ${targetUrl}`);
     

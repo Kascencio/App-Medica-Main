@@ -75,8 +75,18 @@ async function handleRequest(
       try {
         body = await request.text();
         console.log(`[PROXY] Body length: ${body.length} chars`);
+        
+        // Para métodos PATCH y PUT, permitir body vacío
+        if ((method === 'PATCH' || method === 'PUT') && body.length === 0) {
+          console.log(`[PROXY] ${method} con body vacío - permitido`);
+          body = undefined; // No enviar body vacío
+        }
       } catch (error) {
         console.warn('[PROXY] No se pudo leer el body:', error);
+        // Para métodos PATCH y PUT, continuar sin body si hay error
+        if (method === 'PATCH' || method === 'PUT') {
+          body = undefined;
+        }
       }
     }
 

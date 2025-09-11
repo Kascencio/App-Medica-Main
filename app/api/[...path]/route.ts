@@ -1,218 +1,100 @@
-import { NextRequest, NextResponse } from 'next/server';
+// app/api/proxy/[...path]/route.ts
+import type { NextRequest } from 'next/server';
 import { BACKEND_CONFIG } from '@/lib/config';
 
-export async function GET(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
-  return handleRequest(request, params.path, 'GET');
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
+const HOP_BY_HOP = new Set([
+  'connection','keep-alive','proxy-authenticate','proxy-authorization',
+  'te','trailers','transfer-encoding','upgrade','content-length'
+]);
+
+function joinUrl(base: string, path: string) {
+  const b = base.replace(/\/+$/,'');
+  const p = path.replace(/^\/+/,'');
+  return `${b}/${p}`;
 }
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
-  return handleRequest(request, params.path, 'POST');
+function backendTarget(apiPath: string, search: string) {
+  const base = BACKEND_CONFIG.BASE_URL.endsWith('/api')
+    ? BACKEND_CONFIG.BASE_URL
+    : `${BACKEND_CONFIG.BASE_URL}/api`;
+  return `${joinUrl(base, apiPath)}${search ?? ''}`;
 }
 
-export async function PUT(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
-  return handleRequest(request, params.path, 'PUT');
+function filterReqHeaders(req: NextRequest) {
+  const h = new Headers(req.headers);
+  for (const k of HOP_BY_HOP) h.delete(k);
+  // No forces 'origin'/'referer' unless you need them
+  return h;
 }
 
-export async function DELETE(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
-  return handleRequest(request, params.path, 'DELETE');
+function filterRespHeaders(h: Headers) {
+  const out = new Headers();
+  h.forEach((v, k) => {
+    if (!HOP_BY_HOP.has(k.toLowerCase())) out.append(k, v);
+  });
+  return out;
 }
 
-export async function PATCH(
-  request: NextRequest,
-  { params }: { params: { path: string[] } }
-) {
-  return handleRequest(request, params.path, 'PATCH');
+async function handle(request: NextRequest, method: string, path: string[]) {
+  const apiPath = path.join('/');
+  const url = new URL(request.url);
+  const target = backendTarget(apiPath, url.search);
+
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 10_000);
+
+  const init: RequestInit = {
+    method,
+    headers: filterReqHeaders(request),
+    body: (method === 'GET' || method === 'HEAD') ? undefined : (request.body as any),
+    signal: controller.signal,
+    // Necesario en algunos runtimes al reenviar streams:
+    ...(request.body ? ({ duplex: 'half' } as any) : {})
+  };
+
+  const resp = await fetch(target, init).finally(() => clearTimeout(t));
+
+  // Passthrough: no toques la carga ni el tipo
+  const headers = filterRespHeaders(resp.headers);
+  // Si necesitas CORS para llamadas cross-origin, descomenta:
+  // headers.set('Access-Control-Allow-Origin', '*');
+  // headers.set('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  // headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+
+  return new Response(resp.body, {
+    status: resp.status,
+    statusText: resp.statusText,
+    headers
+  });
 }
 
-async function handleRequest(
-  request: NextRequest,
-  pathSegments: string[],
-  method: string
-) {
-  try {
-    const apiPath = pathSegments.join('/');
-    
-    // ✅ SOLUCIÓN: Detección automática del prefijo para evitar duplicación
-    const baseUrl = BACKEND_CONFIG.BASE_URL.endsWith('/api') 
-      ? BACKEND_CONFIG.BASE_URL 
-      : `${BACKEND_CONFIG.BASE_URL}/api`;
-    const targetUrl = `${baseUrl}/${apiPath}`;
-    
-    // 🔍 LOGS MÁS VISIBLES
-    console.log('=== PROXY DEBUG START ===');
-    console.log('Method:', method);
-    console.log('API Path:', apiPath);
-    console.log('Target URL:', targetUrl);
-    
-    // Headers mejorados
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      'Accept': 'application/json',
-    };
-    
-    // Copiar headers importantes de la petición original
-    request.headers.forEach((value, key) => {
-      const lowerKey = key.toLowerCase();
-      
-      // Incluir headers importantes pero excluir los problemáticos
-      if (
-        !['host', 'origin', 'referer', 'content-length', 'transfer-encoding'].includes(lowerKey) &&
-        (lowerKey.startsWith('authorization') || 
-         lowerKey.startsWith('x-') ||
-         lowerKey === 'user-agent' ||
-         lowerKey === 'accept-language')
-      ) {
-        headers[key] = value;
-      }
-    });
-
-    // Preparar el body para métodos que lo requieren
-    let body: string | undefined;
-    if (method !== 'GET' && method !== 'HEAD') {
-      try {
-        body = await request.text();
-        
-        // 🔍 LOGS MÁS VISIBLES PARA EL BODY
-        console.log('=== BODY DEBUG ===');
-        console.log('Body length:', body.length);
-        console.log('Body content:', body);
-        
-        // Parsear y mostrar el patientProfileId específicamente
-        try {
-          const bodyData = JSON.parse(body);
-          console.log('=== PATIENT PROFILE ID DEBUG ===');
-          console.log('patientProfileId type:', typeof bodyData.patientProfileId);
-          console.log('patientProfileId value:', bodyData.patientProfileId);
-          console.log('patientProfileId is string?', typeof bodyData.patientProfileId === 'string');
-        } catch (parseError) {
-          console.log('Error parsing body:', parseError);
-        }
-        
-        // Para métodos PATCH y PUT, permitir body vacío
-        if ((method === 'PATCH' || method === 'PUT') && body.length === 0) {
-          console.log(`[PROXY] ${method} con body vacío - permitido`);
-          body = undefined; // No enviar body vacío
-        }
-      } catch (error) {
-        console.log('Error reading body:', error);
-        // Para métodos PATCH y PUT, continuar sin body si hay error
-        if (method === 'PATCH' || method === 'PUT') {
-          body = undefined;
-        }
-      }
+export async function GET(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return handle(req, 'GET', params.path);
+}
+export async function POST(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return handle(req, 'POST', params.path);
+}
+export async function PUT(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return handle(req, 'PUT', params.path);
+}
+export async function DELETE(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return handle(req, 'DELETE', params.path);
+}
+export async function PATCH(req: NextRequest, { params }: { params: { path: string[] } }) {
+  return handle(req, 'PATCH', params.path);
+}
+export async function OPTIONS() {
+  // Útil si tu frontend llama desde otro origen y hay preflight
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     }
-
-    // Obtener query parameters
-    const url = new URL(request.url);
-    const queryString = url.searchParams.toString();
-    const finalUrl = queryString ? `${targetUrl}?${queryString}` : targetUrl;
-
-    console.log(`[PROXY] Final URL: ${finalUrl}`);
-    console.log(`[PROXY] Headers:`, Object.keys(headers));
-
-    // 🔍 DEBUG: Agregar log para el body que se envía
-    if (body) {
-      console.log(`[PROXY] Sending body:`, body);
-    }
-
-    // Hacer la petición al backend con timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos timeout
-
-    const response = await fetch(finalUrl, {
-      method,
-      headers,
-      body,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    console.log(`[PROXY] Response status: ${response.status} ${response.statusText}`);
-
-    // Obtener la respuesta del backend
-    let responseData;
-    const contentType = response.headers.get('content-type');
-    
-    try {
-      if (contentType && contentType.includes('application/json')) {
-        responseData = await response.json();
-      } else {
-        responseData = await response.text();
-      }
-    } catch (error) {
-      console.error('[PROXY] Error parsing response:', error);
-      responseData = { error: 'Error parsing response from backend' };
-    }
-
-    // Crear la respuesta para el cliente
-    const nextResponse = NextResponse.json(responseData, {
-      status: response.status,
-      statusText: response.statusText,
-    });
-
-    // Copiar headers relevantes de la respuesta del backend
-    response.headers.forEach((value, key) => {
-      const lowerKey = key.toLowerCase();
-      if (
-        !['content-length', 'transfer-encoding', 'connection'].includes(lowerKey) &&
-        (lowerKey.startsWith('access-control') ||
-         lowerKey.startsWith('cache-control') ||
-         lowerKey === 'content-type')
-      ) {
-        nextResponse.headers.set(key, value);
-      }
-    });
-
-    // Headers CORS importantes
-    nextResponse.headers.set('Access-Control-Allow-Origin', '*');
-    nextResponse.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    nextResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-
-    console.log(`[PROXY] Success: ${method} ${apiPath} -> ${response.status}`);
-    console.log('=== PROXY DEBUG END ===');
-    return nextResponse;
-
-  } catch (error) {
-    console.error(`[PROXY] Error en ${method} ${pathSegments.join('/')}:`, error);
-    console.log('=== PROXY DEBUG END (ERROR) ===');
-    
-    // Manejo de errores más específico
-    if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        return NextResponse.json(
-          { error: 'Timeout', message: 'El backend no respondió a tiempo' },
-          { status: 504 }
-        );
-      }
-      
-      if (error.message.includes('fetch')) {
-        return NextResponse.json(
-          { error: 'Connection Error', message: 'No se pudo conectar al backend' },
-          { status: 502 }
-        );
-      }
-    }
-
-    return NextResponse.json(
-      { 
-        error: 'Proxy Error', 
-        message: 'Error interno del proxy',
-        details: error instanceof Error ? error.message : 'Error desconocido'
-      },
-      { status: 500 }
-    );
-  }
+  });
 }

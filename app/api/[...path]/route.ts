@@ -43,7 +43,7 @@ async function handleRequest(
 ) {
   try {
     const apiPath = pathSegments.join('/');
-    const targetUrl = `${BACKEND_CONFIG.BASE_URL}/${apiPath}`;
+    const targetUrl = `${BACKEND_CONFIG.BASE_URL}/api/${apiPath}`;
     
     console.log(`[PROXY] ${method} ${apiPath} -> ${targetUrl}`);
     

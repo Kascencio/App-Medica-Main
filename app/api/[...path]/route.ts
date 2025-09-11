@@ -43,7 +43,17 @@ async function handleRequest(
 ) {
   try {
     const apiPath = pathSegments.join('/');
-    const targetUrl = `${BACKEND_CONFIG.BASE_URL}/api/${apiPath}`;
+    
+    // Excluir rutas de autenticación - estas deben usar endpoints locales
+    if (apiPath.startsWith('auth/')) {
+      console.log(`[PROXY] Excluyendo ruta de autenticación: ${apiPath}`);
+      return NextResponse.json(
+        { error: 'Ruta de autenticación debe usar endpoints locales' },
+        { status: 404 }
+      );
+    }
+    
+    const targetUrl = `${BACKEND_CONFIG.BASE_URL}/${apiPath}`;
     
     console.log(`[PROXY] ${method} ${apiPath} -> ${targetUrl}`);
     

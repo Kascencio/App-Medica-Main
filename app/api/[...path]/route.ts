@@ -50,7 +50,11 @@ async function handleRequest(
       : `${BACKEND_CONFIG.BASE_URL}/api`;
     const targetUrl = `${baseUrl}/${apiPath}`;
     
-    console.log(`[PROXY] ${method} ${apiPath} -> ${targetUrl}`);
+    // 🔍 LOGS MÁS VISIBLES
+    console.log('=== PROXY DEBUG START ===');
+    console.log('Method:', method);
+    console.log('API Path:', apiPath);
+    console.log('Target URL:', targetUrl);
     
     // Headers mejorados
     const headers: Record<string, string> = {
@@ -79,18 +83,21 @@ async function handleRequest(
     if (method !== 'GET' && method !== 'HEAD') {
       try {
         body = await request.text();
-        console.log(`[PROXY] Body length: ${body.length} chars`);
         
-        // 🔍 DEBUG: Agregar logs para el body
-        console.log(`[PROXY] Body content:`, body);
+        // 🔍 LOGS MÁS VISIBLES PARA EL BODY
+        console.log('=== BODY DEBUG ===');
+        console.log('Body length:', body.length);
+        console.log('Body content:', body);
         
-        // Parsear el body para verificar el patientProfileId
+        // Parsear y mostrar el patientProfileId específicamente
         try {
           const bodyData = JSON.parse(body);
-          console.log(`[PROXY] patientProfileId type:`, typeof bodyData.patientProfileId);
-          console.log(`[PROXY] patientProfileId value:`, bodyData.patientProfileId);
+          console.log('=== PATIENT PROFILE ID DEBUG ===');
+          console.log('patientProfileId type:', typeof bodyData.patientProfileId);
+          console.log('patientProfileId value:', bodyData.patientProfileId);
+          console.log('patientProfileId is string?', typeof bodyData.patientProfileId === 'string');
         } catch (parseError) {
-          console.log(`[PROXY] Error parsing body for debug:`, parseError);
+          console.log('Error parsing body:', parseError);
         }
         
         // Para métodos PATCH y PUT, permitir body vacío
@@ -99,7 +106,7 @@ async function handleRequest(
           body = undefined; // No enviar body vacío
         }
       } catch (error) {
-        console.warn('[PROXY] No se pudo leer el body:', error);
+        console.log('Error reading body:', error);
         // Para métodos PATCH y PUT, continuar sin body si hay error
         if (method === 'PATCH' || method === 'PUT') {
           body = undefined;
@@ -175,10 +182,12 @@ async function handleRequest(
     nextResponse.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
     console.log(`[PROXY] Success: ${method} ${apiPath} -> ${response.status}`);
+    console.log('=== PROXY DEBUG END ===');
     return nextResponse;
 
   } catch (error) {
     console.error(`[PROXY] Error en ${method} ${pathSegments.join('/')}:`, error);
+    console.log('=== PROXY DEBUG END (ERROR) ===');
     
     // Manejo de errores más específico
     if (error instanceof Error) {

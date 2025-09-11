@@ -2,7 +2,7 @@
 
 const http = require('http');
 
-console.log('🧪 PROBANDO LOGS DE DEBUG DEL PROXY...\n');
+console.log('🧪 PROBANDO LOGS MÁS VISIBLES DEL PROXY...\n');
 
 function testEndpoint(method, path, description, body = null) {
   return new Promise((resolve) => {
@@ -58,7 +58,7 @@ function testEndpoint(method, path, description, body = null) {
 
 async function runTests() {
   const endpoints = [
-    // Probar con patientProfileId como string (debería mostrar el tipo en logs)
+    // Probar con patientProfileId como string (debería mostrar logs visibles)
     { 
       method: 'POST', 
       path: '/api/medications', 
@@ -72,7 +72,7 @@ async function runTests() {
         startDate: '2024-01-01T00:00:00.000Z'
       }
     },
-    // Probar con patientProfileId como número (debería mostrar el tipo en logs)
+    // Probar con patientProfileId como número (debería mostrar logs visibles)
     { 
       method: 'POST', 
       path: '/api/medications', 
@@ -82,15 +82,9 @@ async function runTests() {
         name: 'Ibuprofeno',
         dosage: '400mg',
         type: 'Oral',
-        frequency: 'twice daily',
+        frequency: 'daily',
         startDate: '2024-01-01T00:00:00.000Z'
       }
-    },
-    // Probar PATCH con body vacío (debería mostrar logs de body vacío)
-    { 
-      method: 'PATCH', 
-      path: '/api/notifications/1/read', 
-      description: 'PATCH con body vacío (debería mostrar logs de debug)'
     },
     // Probar GET sin body (debería mostrar logs básicos)
     { 
@@ -100,12 +94,20 @@ async function runTests() {
     }
   ];
 
-  console.log('📍 Probando logs de debug del proxy...\n');
-  console.log('🔍 Revisa los logs del servidor para ver:');
-  console.log('   - [PROXY] Body content: ...');
-  console.log('   - [PROXY] patientProfileId type: ...');
-  console.log('   - [PROXY] patientProfileId value: ...');
-  console.log('   - [PROXY] Sending body: ...');
+  console.log('📍 Probando logs más visibles del proxy...\n');
+  console.log('🔍 BUSCA EN LOS LOGS DEL SERVIDOR:');
+  console.log('   === PROXY DEBUG START ===');
+  console.log('   Method: POST');
+  console.log('   API Path: medications');
+  console.log('   Target URL: http://72.60.30.129:3001/api/medications');
+  console.log('   === BODY DEBUG ===');
+  console.log('   Body length: XXX');
+  console.log('   Body content: {"patientProfileId":"cmff28z53000bjxvg0z4smal1",...}');
+  console.log('   === PATIENT PROFILE ID DEBUG ===');
+  console.log('   patientProfileId type: string');
+  console.log('   patientProfileId value: cmff28z53000bjxvg0z4smal1');
+  console.log('   patientProfileId is string? true');
+  console.log('   === PROXY DEBUG END ===');
   console.log('');
   
   for (const endpoint of endpoints) {
@@ -119,18 +121,23 @@ async function runTests() {
     }
     console.log('');
     
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
   }
   
   console.log('🎯 Pruebas completadas!');
   console.log('\n📋 LOGS ESPERADOS EN EL SERVIDOR:');
-  console.log('✅ [PROXY] POST medications -> http://72.60.30.129:3001/api/medications');
-  console.log('✅ [PROXY] Body length: XXX chars');
-  console.log('✅ [PROXY] Body content: {"patientProfileId":"cmff28z53000bjxvg0z4smal1",...}');
-  console.log('✅ [PROXY] patientProfileId type: string');
-  console.log('✅ [PROXY] patientProfileId value: cmff28z53000bjxvg0z4smal1');
-  console.log('✅ [PROXY] Sending body: {"patientProfileId":"cmff28z53000bjxvg0z4smal1",...}');
-  console.log('✅ [PROXY] Response status: 400 Bad Request');
+  console.log('✅ === PROXY DEBUG START ===');
+  console.log('✅ Method: POST');
+  console.log('✅ API Path: medications');
+  console.log('✅ Target URL: http://72.60.30.129:3001/api/medications');
+  console.log('✅ === BODY DEBUG ===');
+  console.log('✅ Body length: XXX');
+  console.log('✅ Body content: {"patientProfileId":"cmff28z53000bjxvg0z4smal1",...}');
+  console.log('✅ === PATIENT PROFILE ID DEBUG ===');
+  console.log('✅ patientProfileId type: string');
+  console.log('✅ patientProfileId value: cmff28z53000bjxvg0z4smal1');
+  console.log('✅ patientProfileId is string? true');
+  console.log('✅ === PROXY DEBUG END ===');
 }
 
 runTests().catch(console.error);
